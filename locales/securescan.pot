@@ -59,6 +59,8 @@ msgid "The antivirus test succeeded, but SecureScan could not save the test resu
 msgstr ""
 msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
 msgstr ""
+msgid "Go to logs"
+msgstr ""
 msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
 msgstr ""
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
