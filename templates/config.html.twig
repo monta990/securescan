@@ -1,0 +1,31 @@
+{% import "components/form/fields_macros.html.twig" as fields %}
+<div class="card mx-auto" style="max-width: 980px;">
+    <div class="card-header">
+        <div class="card-title d-flex align-items-center gap-2">
+            <span class="avatar bg-blue-lt"><i class="ti ti-shield-check"></i></span>
+            <div><div class="h2 mb-0">{{ __('SecureScan', 'securescan') }}</div><div class="text-muted">{{ __('Analyze every file before it is published using the server antivirus.', 'securescan') }}</div></div>
+        </div>
+    </div>
+    {% if can_edit %}
+    <form name="form" action="{{ path('/plugins/securescan/Config/Save') }}" method="POST">
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+        <div class="card-body">
+            <div class="mb-4">
+                {{ fields.dropdownYesNo('securescan_enabled', current_config['securescan_enabled'], __('Enable scanning before publishing', 'securescan')) }}
+                <div class="form-hint">{{ __('The file remains temporary until the antivirus returns a clean result.', 'securescan') }}<br>{{ __('You must run Test antivirus successfully for the current command before enabling scanning.', 'securescan') }}</div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="securescan-command">{{ __('Scan command', 'securescan') }}</label>
+                <input type="text" class="form-control" id="securescan-command" name="securescan_command" value="{{ current_config['securescan_command']|e }}" autocomplete="off">
+                <div class="form-hint">{{ __('Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}.', 'securescan') }}</div>
+                <div class="form-hint text-muted mt-1">{{ __('For security, separators, redirects, substitutions, comments, and shell operators are not allowed.', 'securescan') }}</div>
+                <div class="form-hint text-muted mt-1">{{ __('Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged.', 'securescan') }}</div>
+            </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i><span>{{ _x('button', 'Save') }}</span></button>
+            <button type="submit" formaction="{{ path('/plugins/securescan/Antivirus/Test') }}" class="btn btn-outline-primary"><i class="ti ti-shield-check"></i>{{ __('Test antivirus', 'securescan') }}</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
