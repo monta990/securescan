@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <name>SecureScan</name>
+  <key>securescan</key>
+  <state>stable</state>
+  <logo>https://raw.githubusercontent.com/monta990/securescan/main/logo.png</logo>
+  <description>
+    <short>
+      <en>Analyze uploaded files with the server antivirus before storing them.</en>
+      <es>Analiza archivos cargados con el antivirus del servidor antes de almacenarlos.</es>
+      <fr>Analyse les fichiers chargés avec l'antivirus du serveur avant leur stockage.</fr>
+      <pt>Analise os arquivos enviados com o antivírus do servidor antes de armazená-los.</pt>
+    </short>
+    <long>
+      <en>SecureScan validates uploaded files with a configurable server antivirus before GLPI stores them permanently. Scanning is disabled after installation until the administrator validates the command.</en>
+      <es>SecureScan valida los archivos cargados con un antivirus configurable del servidor antes de que GLPI los almacene permanentemente. El análisis está desactivado después de la instalación hasta que el administrador valide el comando.</es>
+      <fr>SecureScan valide les fichiers chargés avec un antivirus configurable du serveur avant que GLPI ne les stocke définitivement. L'analyse est désactivée après l'installation jusqu'à ce que l'administrateur valide la commande.</fr>
+      <pt>O SecureScan valida os arquivos enviados com um antivírus configurável do servidor antes que o GLPI os armazene permanentemente. A análise fica desativada após a instalação até que o administrador valide o comando.</pt>
+    </long>
+  </description>
+  <homepage>https://github.com/monta990/securescan</homepage>
+  <issues>https://github.com/monta990/securescan/issues</issues>
+  <readme>https://github.com/monta990/securescan/blob/main/README.md</readme>
+  <authors>
+    <author>Edwin Elias Alvarez</author>
+  </authors>
+  <versions>
+    <version>
+      <num>0.1.26</num>
+      <compatibility>~12.0.0</compatibility>
+    </version>
+    <version>
+      <num>0.1.26</num>
+      <compatibility>~11.0.0</compatibility>
+    </version>
+  </versions>
+  <langs>
+    <lang>en_GB</lang>
+    <lang>es_MX</lang>
+    <lang>fr_FR</lang>
+    <lang>pt_BR</lang>
+  </langs>
+  <license>GPLv3+</license>
+  <tags>
+    <en><tag>security</tag><tag>antivirus</tag><tag>files</tag></en>
+    <es><tag>seguridad</tag><tag>antivirus</tag><tag>archivos</tag></es>
+    <fr><tag>sécurité</tag><tag>antivirus</tag><tag>fichiers</tag></fr>
+    <pt><tag>segurança</tag><tag>antivírus</tag><tag>arquivos</tag></pt>
+  </tags>
+</root>

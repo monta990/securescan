@@ -1,52 +1,99 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan 0.1.24\n"
+"Project-Id-Version: SecureScan 0.1.25\n"
+"Report-Msgid-Bugs-To: \n"
 "Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "SecureScan"
 msgstr "SecureScan"
 
-msgid "Antivirus command"
-msgstr "Commande antivirus"
+msgid "Analyze every file before it is published using the server antivirus."
+msgstr "Analyse chaque fichier avant sa publication à l’aide de l’antivirus du serveur."
 
-msgid "Enable antivirus scanning"
-msgstr "Activer l'analyse antivirus"
+msgid "Enable scanning before publishing"
+msgstr "Activer l’analyse avant la publication"
+
+msgid "The file remains temporary until the antivirus returns a clean result."
+msgstr "Le fichier reste temporaire jusqu’à ce que l’antivirus renvoie un résultat sain."
+
+msgid "Scan command"
+msgstr "Commande d’analyse"
+
+msgid "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
+msgstr "Utilisez {file} comme emplacement du fichier temporaire. Par défaut : clamdscan --no-summary {file}."
+
+msgid "For security, separators, redirects, substitutions, comments, and shell operators are not allowed."
+msgstr "Pour des raisons de sécurité, les séparateurs, redirections, substitutions, commentaires et opérateurs shell ne sont pas autorisés."
 
 msgid "Test antivirus"
-msgstr "Tester l'antivirus"
+msgstr "Tester l’antivirus"
 
-msgid "Save"
-msgstr "Enregistrer"
+msgid "Unable to create the temporary test file."
+msgstr "Impossible de créer le fichier temporaire de test."
 
-msgid "The antivirus test completed successfully."
-msgstr "Le test antivirus s'est terminé avec succès."
+msgid "SecureScan could not access the temporary file."
+msgstr "SecureScan n’a pas pu accéder au fichier temporaire."
+
+msgid "SecureScan requires the PHP exec() function to be available."
+msgstr "SecureScan nécessite que la fonction PHP exec() soit disponible."
+
+msgid "The antivirus command must contain the {file} placeholder."
+msgstr "La commande antivirus doit contenir l’emplacement {file}."
+
+msgid "The command contains forbidden characters or operators."
+msgstr "La commande contient des caractères ou opérateurs interdits."
+
+msgid "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
+msgstr "SecureScan n’a pas pu trouver l’exécutable de l’antivirus pour le processus PHP. Vérifiez le chemin de la commande et les autorisations de l’utilisateur du serveur web/PHP."
+
+msgid "The antivirus responded successfully and the test file is clean."
+msgstr "L’antivirus a répondu correctement et le fichier de test est sain."
 
 msgid "The antivirus detected a threat. The file was rejected."
-msgstr "L'antivirus a détecté une menace. Le fichier a été rejeté."
+msgstr "L’antivirus a détecté une menace. Le fichier a été rejeté."
 
-msgid "SecureScan could not complete the antivirus scan."
-msgstr "SecureScan n'a pas pu terminer l'analyse antivirus."
+msgid "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
+msgstr "SecureScan n’a pas pu terminer l’analyse antivirus (code %d). Le fichier a été rejeté."
 
-msgid "Run the antivirus test successfully for the current command before enabling scanning."
-msgstr "Exécutez correctement le test antivirus pour la commande actuelle avant d'activer l'analyse."
+msgid "The antivirus command cannot be empty."
+msgstr "La commande antivirus ne peut pas être vide."
 
-msgid "Clean"
-msgstr "Sain"
+msgid "SecureScan configuration could not be saved."
+msgstr "La configuration de SecureScan n’a pas pu être enregistrée."
 
-msgid "Infected"
-msgstr "Infecté"
+msgid "SecureScan configuration saved successfully."
+msgstr "La configuration de SecureScan a été enregistrée avec succès."
 
-msgid "Audit log"
-msgstr "Journal d'audit"
+msgid "Unable to write the temporary test file."
+msgstr "Impossible d’écrire le fichier temporaire de test."
 
-msgid "Security"
-msgstr "Sécurité"
+msgid "SecureScan could not locate the temporary uploaded file."
+msgstr "SecureScan n’a pas pu localiser le fichier temporaire téléversé."
 
-msgid "Configuration"
-msgstr "Configuration"
+msgid "Run Test antivirus successfully before enabling scanning."
+msgstr "Exécutez correctement Tester l’antivirus avant d’activer l’analyse."
+
+msgid "You must run Test antivirus successfully for the current command before enabling scanning."
+msgstr "Vous devez exécuter correctement Tester l’antivirus pour la commande actuelle avant d’activer l’analyse."
+
+msgid "Run Test antivirus successfully for the current command before enabling scanning."
+msgstr "Exécutez correctement Tester l’antivirus pour la commande actuelle avant d’activer l’analyse."
+
+msgid "The antivirus test succeeded, but SecureScan could not save the test result."
+msgstr "Le test antivirus a réussi, mais SecureScan n’a pas pu enregistrer le résultat du test."
+
+msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
+msgstr "Les résultats des analyses de documents sont enregistrés dans le journal de fichiers de GLPI : files/_log/securescan.log. Le contenu des fichiers n’est jamais enregistré."
 
 msgid "Go to logs"
-msgstr "Voir les journaux"
+msgstr "Accéder aux journaux"
+
+msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
+msgstr "SecureScan : fichier analysé avec succès et enregistré. Résultat : sain. SHA-256 : %s"
+
+msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
+msgstr "SecureScan : fichier analysé et enregistré. Résultat : %s. SHA-256 : %s"
