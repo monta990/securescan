@@ -30,7 +30,7 @@
       <num>1.0.0</num>
       <compatibility>~12.0.0</compatibility>
       <compatibility>~11.0.0</compatibility>
-      <download_url>https://github.com/monta990/securescan/releases/download/v1.0.0/securescan-1.0.0.zip</download_url>
+      <download_url>https://github.com/monta990/securescan/releases/download/1.0.0/securescan-1.0.0.zip</download_url>
     </version>
   </versions>
   <langs>
