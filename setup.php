@@ -32,8 +32,6 @@ function plugin_init_securescan(): void
 {
     global $PLUGIN_HOOKS;
 
-    $PLUGIN_HOOKS['csrf_compliant']['securescan'] = true;
-
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['securescan'] = [
         \Document::class => [
             \GlpiPlugin\Securescan\Antivirus::class,
