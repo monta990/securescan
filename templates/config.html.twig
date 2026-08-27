@@ -1,4 +1,9 @@
 {% import "components/form/fields_macros.html.twig" as fields %}
+<style>
+    .securescan-enabled-field .form-label {
+        white-space: nowrap;
+    }
+</style>
 <div class="card mx-auto" style="max-width: 980px;">
     <div class="card-header">
         <div class="card-title d-flex align-items-center gap-2">
@@ -10,7 +15,7 @@
     <form name="form" action="{{ path('/plugins/securescan/Config/Save') }}" method="POST">
         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
         <div class="card-body">
-            <div class="mb-4">
+            <div class="mb-4 securescan-enabled-field">
                 {{ fields.dropdownYesNo('securescan_enabled', current_config['securescan_enabled'], __('Enable scanning before publishing', 'securescan')) }}
                 <div class="form-hint">{{ __('The file remains temporary until the antivirus returns a clean result.', 'securescan') }}<br>{{ __('You must run Test antivirus successfully for the current command before enabling scanning.', 'securescan') }}</div>
             </div>
@@ -20,11 +25,12 @@
                 <div class="form-hint">{{ __('Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}.', 'securescan') }}</div>
                 <div class="form-hint text-muted mt-1">{{ __('For security, separators, redirects, substitutions, comments, and shell operators are not allowed.', 'securescan') }}</div>
                 <div class="form-hint text-muted mt-1">{{ __('Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged.', 'securescan') }}</div>
+                <div class="form-hint mt-1"><i class="ti ti-file-text me-1" aria-hidden="true"></i><a href="{{ path('/front/logs.php') }}">{{ __('Go to logs', 'securescan') }}</a></div>
             </div>
         </div>
         <div class="card-footer d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i><span>{{ _x('button', 'Save') }}</span></button>
-            <button type="submit" formaction="{{ path('/plugins/securescan/Antivirus/Test') }}" class="btn btn-outline-primary"><i class="ti ti-shield-check"></i>{{ __('Test antivirus', 'securescan') }}</button>
+            <button type="submit" formaction="{{ path('/plugins/securescan/Antivirus/Test') }}" class="btn btn-outline-primary"><i class="ti ti-shield-check"></i><span>{{ __('Test antivirus', 'securescan') }}</span></button>
         </div>
     </form>
     {% endif %}
