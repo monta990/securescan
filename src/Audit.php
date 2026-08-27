@@ -10,6 +10,9 @@ namespace GlpiPlugin\Securescan;
  */
 final class Audit
 {
+    /**
+     * Record a scan without storing file contents or sensitive command output.
+     */
     public static function record(string $type, array $result, string $file, ?object $item = null): void
     {
         $record = [
@@ -28,6 +31,11 @@ final class Audit
         self::write($record);
     }
 
+    /**
+     * Record the successful persistence of a scanned document.
+     * This is intentionally separate from the pre-add/pre-update scan record
+     * because GLPI does not assign the final item ID until after the pre hook.
+     */
     public static function recordStored(
         string $type,
         string $status,
@@ -52,6 +60,12 @@ final class Audit
         self::writeDocumentHistory($status, $sha256, $item);
     }
 
+    /**
+     * Add the successful scan result to the native GLPI history of the
+     * document. This keeps the audit visible from the document's
+     * Histórico tab while the detailed JSON evidence remains in
+     * files/_log/securescan.log.
+     */
     private static function writeDocumentHistory(string $status, ?string $sha256, ?object $item): void
     {
         if ($item === null || !method_exists($item, 'getID')) {
@@ -74,6 +88,8 @@ final class Audit
                 $sha256 ?? 'N/A'
             );
 
+        // GLPI's native history API uses search option 0 plus the
+        // HISTORY_LOG_SIMPLE_MESSAGE action for free-form audit messages.
         try {
             \Log::history(
                 $itemsId,
@@ -83,6 +99,9 @@ final class Audit
                 \Log::HISTORY_LOG_SIMPLE_MESSAGE
             );
         } catch (\Throwable $e) {
+            // A history-entry failure must never invalidate an already
+            // stored clean document. The detailed SecureScan log remains
+            // the fallback evidence.
             \Toolbox::logDebug($e);
         }
     }

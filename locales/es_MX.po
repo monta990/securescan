@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan\n"
+"Project-Id-Version: SecureScan 0.1.25\n"
 "Report-Msgid-Bugs-To: \n"
 "Language: es_MX\n"
 "MIME-Version: 1.0\n"
@@ -10,75 +10,111 @@ msgstr ""
 
 msgid "SecureScan"
 msgstr "SecureScan"
+
 msgid "Analyze every file before it is published using the server antivirus."
 msgstr "Analiza cada archivo antes de publicarlo utilizando el antivirus del servidor."
+
 msgid "Enable scanning before publishing"
 msgstr "Habilitar análisis antes de publicar"
+
 msgid "The file remains temporary until the antivirus returns a clean result."
 msgstr "El archivo permanece temporal hasta que el antivirus devuelve un resultado limpio."
+
 msgid "Scan command"
 msgstr "Comando de análisis"
+
 msgid "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
 msgstr "Use {file} como marcador del archivo temporal. Predeterminado: clamdscan --no-summary {file}."
+
 msgid "For security, separators, redirects, substitutions, comments, and shell operators are not allowed."
 msgstr "Por seguridad no se permiten separadores, redirecciones, sustituciones, comentarios ni operadores de shell."
+
 msgid "Test antivirus"
 msgstr "Probar antivirus"
+
 msgid "Unable to create the temporary test file."
 msgstr "No se pudo crear el archivo temporal de prueba."
+
 msgid "SecureScan could not access the temporary file."
 msgstr "SecureScan no pudo acceder al archivo temporal."
+
 msgid "SecureScan requires the PHP exec() function to be available."
 msgstr "SecureScan requiere que la función PHP exec() esté disponible."
+
 msgid "The antivirus command must contain the {file} placeholder."
 msgstr "El comando del antivirus debe contener el marcador {file}."
+
 msgid "The command contains forbidden characters or operators."
 msgstr "El comando contiene caracteres u operadores no permitidos."
+
 msgid "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
 msgstr "SecureScan no pudo encontrar el ejecutable del antivirus para el proceso de PHP. Verifique la ruta del comando y los permisos del usuario del servidor web/PHP."
+
 msgid "The antivirus responded successfully and the test file is clean."
 msgstr "El antivirus respondió correctamente y el archivo de prueba está limpio."
+
 msgid "The antivirus detected a threat. The file was rejected."
 msgstr "El antivirus detectó una amenaza. El archivo fue rechazado."
+
 msgid "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
 msgstr "SecureScan no pudo completar el análisis del antivirus (código %d). El archivo fue rechazado."
+
 msgid "The antivirus command cannot be empty."
 msgstr "El comando del antivirus no puede estar vacío."
+
 msgid "SecureScan configuration could not be saved."
 msgstr "No se pudo guardar la configuración de SecureScan."
+
 msgid "SecureScan configuration saved successfully."
 msgstr "La configuración de SecureScan se guardó correctamente."
+
 msgid "Unable to write the temporary test file."
 msgstr "No se pudo escribir el archivo temporal de prueba."
+
 msgid "SecureScan could not locate the temporary uploaded file."
 msgstr "SecureScan no pudo localizar el archivo temporal cargado."
+
 msgid "Run Test antivirus successfully before enabling scanning."
 msgstr "Ejecute correctamente Probar antivirus antes de habilitar el análisis."
+
 msgid "You must run Test antivirus successfully for the current command before enabling scanning."
 msgstr "Debe ejecutar correctamente Probar antivirus para el comando actual antes de habilitar el análisis."
+
 msgid "Run Test antivirus successfully for the current command before enabling scanning."
 msgstr "Ejecute correctamente Probar antivirus para el comando actual antes de habilitar el análisis."
+
 msgid "The antivirus test succeeded, but SecureScan could not save the test result."
 msgstr "La prueba del antivirus fue correcta, pero SecureScan no pudo guardar el resultado de la prueba."
+
 msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
 msgstr "Los resultados de los análisis de documentos se registran en el archivo de logs de GLPI: files/_log/securescan.log. Nunca se registra el contenido de los archivos."
+
 msgid "Go to logs"
 msgstr "Ir a registros"
+
 msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
 msgstr "SecureScan: archivo analizado correctamente y almacenado. Resultado: limpio. SHA-256: %s"
+
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
 msgstr "SecureScan: archivo analizado y almacenado. Resultado: %s. SHA-256: %s"
+
 msgid "A new SecureScan version is available."
 msgstr "Hay una nueva versión de SecureScan disponible."
+
 msgid "installed"
 msgstr "instalada"
+
 msgid "View release"
 msgstr "Ver versión"
+
 msgid "SecureScan is up to date."
 msgstr "SecureScan está actualizado."
+
 msgid "Latest stable"
 msgstr "Última versión estable"
+
 msgid "View releases"
 msgstr "Ver versiones"
+
 msgid "GitHub version check is currently unavailable."
 msgstr "El verificador de versiones de GitHub no está disponible actualmente."

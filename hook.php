@@ -46,8 +46,19 @@ function plugin_securescan_install(): bool
         }
     }
 
+    /*
+     * Do not reset the cache immediately during the install/update request.
+     * GLPI's compiled Symfony container can still be required by the current
+     * request. Resetting it here makes that request try to load a generated
+     * PHP file that has just been deleted.
+     *
+     * Defer the reset until PHP is terminating, after GLPI has finished
+     * generating the installation response. This keeps the native cache
+     * manager while avoiding a cache-reset race inside the same request.
+     */
     register_shutdown_function(static function (): void {
         $cacheManager = new CacheManager();
+
         if (method_exists($cacheManager, 'resetAllCaches')) {
             $cacheManager->resetAllCaches();
         }

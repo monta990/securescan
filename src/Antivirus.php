@@ -13,16 +13,40 @@ use Session;
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * SecureScan is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with SecureScan. If not, see <https://www.gnu.org/licenses/>.
  */
 final class Antivirus
 {
+    /**
+     * Clean scans waiting for the corresponding post-add/update hook.
+     *
+     * PRE_ITEM_ADD/PRE_ITEM_UPDATE run before GLPI assigns the final item ID.
+     * Keep the scan fingerprint in memory so the post hook can write an audit
+     * entry containing the definitive Document ID without weakening the
+     * pre-storage security check.
+     *
+     * @var array<int, array{status: string, sha256: ?string, size: ?int}>
+     */
     private static array $pendingScans = [];
 
+    /**
+     * Scan a new Document upload before Document::prepareInputForAdd().
+     */
     public static function preDocumentAdd($item): void
     {
         self::scanDocumentInput($item);
     }
 
+    /**
+     * Scan a replacement Document upload before Document::prepareInputForUpdate().
+     */
     public static function preDocumentUpdate($item): void
     {
         self::scanDocumentInput($item);
@@ -72,11 +96,17 @@ final class Antivirus
         }
     }
 
+    /**
+     * Record the successful creation after GLPI has assigned the Document ID.
+     */
     public static function postDocumentAdd($item): void
     {
         self::recordStoredDocument($item);
     }
 
+    /**
+     * Record the successful update after GLPI has persisted the Document.
+     */
     public static function postDocumentUpdate($item): void
     {
         self::recordStoredDocument($item);
@@ -138,17 +168,25 @@ final class Antivirus
             @unlink($file);
         }
 
+        // PRE_ITEM_ADD/PRE_ITEM_UPDATE: an empty input array stops the operation.
         $item->input = [];
+
         Session::addMessageAfterRedirect($message, false, ERROR);
     }
 
+    /**
+     * @return array{present: bool, path: ?string}
+     */
     private static function extractUploadPath(array $input): array
     {
         if (!empty($input['_filename']) && is_array($input['_filename'])) {
             $filename = reset($input['_filename']);
+
             return [
                 'present' => true,
-                'path'    => is_string($filename) ? self::resolveUploadPath(GLPI_TMP_DIR, $filename) : null,
+                'path'    => is_string($filename)
+                    ? self::resolveUploadPath(GLPI_TMP_DIR, $filename)
+                    : null,
             ];
         }
 
@@ -172,9 +210,17 @@ final class Antivirus
         }
 
         $path = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $filename;
-        return is_file($path) && is_readable($path) ? $path : null;
+
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+
+        return $path;
     }
 
+    /**
+     * @return array{ok: bool, message: string, status?: string, output?: string, exit_code?: int}
+     */
     private static function scan(string $file, string $template, bool $test = false): array
     {
         if (!is_file($file) || !is_readable($file)) {
@@ -216,15 +262,24 @@ final class Antivirus
             ];
         }
 
-        $command = str_replace('{file}', escapeshellarg($file), $resolvedTemplate);
+        $command = str_replace(
+            '{file}',
+            escapeshellarg($file),
+            $resolvedTemplate
+        );
+
         $output = [];
         $exitCode = 255;
+
         exec($command . ' 2>&1', $output, $exitCode);
 
+        // ClamAV convention: 0 = clean, 1 = infected, 2+ = scan error.
         if ($exitCode === 0) {
             return [
                 'ok'      => true,
-                'message' => $test ? __('The antivirus responded successfully and the test file is clean.', 'securescan') : '',
+                'message' => $test
+                    ? __('The antivirus responded successfully and the test file is clean.', 'securescan')
+                    : '',
                 'status'  => 'clean',
                 'output'  => implode("\n", $output),
                 'exit_code' => $exitCode,
@@ -243,13 +298,22 @@ final class Antivirus
 
         return [
             'ok'      => false,
-            'message' => sprintf(__('SecureScan could not complete the antivirus scan (code %d). The file was rejected.', 'securescan'), $exitCode),
+            'message' => sprintf(
+                __('SecureScan could not complete the antivirus scan (code %d). The file was rejected.', 'securescan'),
+                $exitCode
+            ),
             'status'  => 'error',
             'output'  => implode("\n", $output),
             'exit_code' => $exitCode,
         ];
     }
 
+    /**
+     * Resolve the executable independently of the restricted PATH commonly
+     * inherited by PHP-FPM/Apache. The configured command itself remains
+     * unchanged in GLPI; only the executable used for this invocation is
+     * converted to an absolute path when it can be found.
+     */
     private static function resolveExecutable(string $template): ?string
     {
         if (!preg_match('/^\s*(\S+)(.*)$/s', $template, $matches)) {

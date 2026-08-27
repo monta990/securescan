@@ -81,6 +81,8 @@ final class ConfigSaveController extends AbstractController
 
     private function checkAccess(): void
     {
+        // Config::checkGlobal() performs the standard right check and, on
+        // GLPI 12, the required re-authentication for sensitive configuration.
         (new \Config())->checkGlobal(UPDATE);
     }
 }

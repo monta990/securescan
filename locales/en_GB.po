@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan\n"
+"Project-Id-Version: SecureScan 0.1.25\n"
 "Report-Msgid-Bugs-To: \n"
 "Language: en_GB\n"
 "MIME-Version: 1.0\n"
