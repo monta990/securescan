@@ -4,7 +4,7 @@ use Glpi\Plugin\Hooks;
 use GlpiPlugin\Securescan\Config as SecureScanConfig;
 use function Safe\define;
 
-define('PLUGIN_SECURESCAN_VERSION', '0.1.24');
+define('PLUGIN_SECURESCAN_VERSION', '0.1.25');
 define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_SECURESCAN_MAX_GLPI_VERSION', '12.99.99');
 define('PLUGIN_SECURESCAN_MIN_PHP_VERSION', '8.2.0');
