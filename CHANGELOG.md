@@ -1,3 +1,15 @@
+## 0.1.27 - 2026-08-27
+
+### Added
+
+- Added a GitHub stable-release version checker to the SecureScan configuration page.
+- The checker compares the installed version with the latest published, non-draft, non-prerelease SecureScan release.
+- Added six-hour caching with stale-cache fallback so temporary GitHub or network failures do not affect SecureScan operation.
+- Added HTTPS certificate verification, disabled redirects, short connection/total timeouts, bounded response size, strict release-tag validation, and safe release URL validation.
+- Added localized version-status messages and direct access to the SecureScan GitHub Releases page.
+
+---
+
 ## 0.1.26 - 2026-08-27
 
 ### Changed
@@ -89,7 +101,7 @@
 
 ---
 
-## 0.1.18 - 2026-08-27
+## 0.1.18
 
 ### Fixed
 
@@ -109,7 +121,7 @@
 ### Preserved
 
 - Default command: `clamdscan --no-summary {file}`.
-- Scanning disabled by default after installation.
+- Scanning disabled after installation.
 - Successful antivirus validation required before scanning can be enabled.
 - English source language with `es_MX` translation.
 - GPLv3+ license and developer Edwin Elias Alvarez.

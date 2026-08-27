@@ -97,3 +97,24 @@ msgstr "SecureScan : fichier analysé avec succès et enregistré. Résultat : s
 
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
 msgstr "SecureScan : fichier analysé et enregistré. Résultat : %s. SHA-256 : %s"
+
+msgid "A new SecureScan version is available."
+msgstr "Une nouvelle version de SecureScan est disponible."
+
+msgid "installed"
+msgstr "installée"
+
+msgid "View release"
+msgstr "Voir la version"
+
+msgid "SecureScan is up to date."
+msgstr "SecureScan est à jour."
+
+msgid "Latest stable"
+msgstr "Dernière version stable"
+
+msgid "View releases"
+msgstr "Voir les versions"
+
+msgid "GitHub version check is currently unavailable."
+msgstr "La vérification de version GitHub est actuellement indisponible."

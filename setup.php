@@ -23,7 +23,7 @@ use GlpiPlugin\Securescan\Config as SecureScanConfig;
 
 use function Safe\define;
 
-define('PLUGIN_SECURESCAN_VERSION', '0.1.26');
+define('PLUGIN_SECURESCAN_VERSION', '0.1.27');
 define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_SECURESCAN_MAX_GLPI_VERSION', '12.99.99');
 define('PLUGIN_SECURESCAN_MIN_PHP_VERSION', '8.2.0');
@@ -62,13 +62,10 @@ function plugin_init_securescan(): void
         ],
     ];
 
-    // Native GLPI configuration tab. The class extends \Config intentionally;
-    // it does not override getTable() and therefore never creates a plugin table.
     \Plugin::registerClass(SecureScanConfig::class, [
         'addtabon' => [\Config::class],
     ]);
 
-    // Standard configuration gear from Setup > Plugins.
     if (\Session::haveRight('config', UPDATE)) {
         $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['securescan'] = '../../front/config.form.php?forcetab=GlpiPlugin\\Securescan\\Config$1';
     }

@@ -47,6 +47,9 @@ msgstr "The antivirus command must contain the {file} placeholder."
 msgid "The command contains forbidden characters or operators."
 msgstr "The command contains forbidden characters or operators."
 
+msgid "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
+msgstr "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
+
 msgid "The antivirus responded successfully and the test file is clean."
 msgstr "The antivirus responded successfully and the test file is clean."
 
@@ -94,3 +97,24 @@ msgstr "SecureScan: file scanned successfully and stored. Result: clean. SHA-256
 
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
 msgstr "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
+
+msgid "A new SecureScan version is available."
+msgstr "A new SecureScan version is available."
+
+msgid "installed"
+msgstr "installed"
+
+msgid "View release"
+msgstr "View release"
+
+msgid "SecureScan is up to date."
+msgstr "SecureScan is up to date."
+
+msgid "Latest stable"
+msgstr "Latest stable"
+
+msgid "View releases"
+msgstr "View releases"
+
+msgid "GitHub version check is currently unavailable."
+msgstr "GitHub version check is currently unavailable."

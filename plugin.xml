@@ -26,11 +26,11 @@
   </authors>
   <versions>
     <version>
-      <num>0.1.26</num>
+      <num>0.1.27</num>
       <compatibility>~12.0.0</compatibility>
     </version>
     <version>
-      <num>0.1.26</num>
+      <num>0.1.27</num>
       <compatibility>~11.0.0</compatibility>
     </version>
   </versions>
@@ -42,9 +42,25 @@
   </langs>
   <license>GPLv3+</license>
   <tags>
-    <en><tag>security</tag><tag>antivirus</tag><tag>files</tag></en>
-    <es><tag>seguridad</tag><tag>antivirus</tag><tag>archivos</tag></es>
-    <fr><tag>sécurité</tag><tag>antivirus</tag><tag>fichiers</tag></fr>
-    <pt><tag>segurança</tag><tag>antivírus</tag><tag>arquivos</tag></pt>
+    <en>
+      <tag>security</tag>
+      <tag>antivirus</tag>
+      <tag>files</tag>
+    </en>
+    <es>
+      <tag>seguridad</tag>
+      <tag>antivirus</tag>
+      <tag>archivos</tag>
+    </es>
+    <fr>
+      <tag>sécurité</tag>
+      <tag>antivirus</tag>
+      <tag>fichiers</tag>
+    </fr>
+    <pt>
+      <tag>segurança</tag>
+      <tag>antivírus</tag>
+      <tag>arquivos</tag>
+    </pt>
   </tags>
 </root>

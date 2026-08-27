@@ -8,8 +8,37 @@
     <div class="card-header">
         <div class="card-title d-flex align-items-center gap-2">
             <span class="avatar bg-blue-lt"><i class="ti ti-shield-check"></i></span>
-            <div><div class="h2 mb-0">{{ __('SecureScan', 'securescan') }}</div><div class="text-muted">{{ __('Analyze every file before it is published using the server antivirus.', 'securescan') }}</div></div>
+            <div>
+                <div class="h2 mb-0">{{ __('SecureScan', 'securescan') }}</div>
+                <div class="text-muted">{{ __('Analyze every file before it is published using the server antivirus.', 'securescan') }}</div>
+            </div>
         </div>
+    </div>
+    <div class="px-3 pb-3 pt-0">
+        {% if version_status.latest_version %}
+            {% if version_status.update_available %}
+                <div class="alert alert-warning d-flex align-items-center mb-0 py-2" role="status">
+                    <i class="ti ti-download me-2" aria-hidden="true"></i>
+                    <div class="flex-grow-1">
+                        {{ __('A new SecureScan version is available.', 'securescan') }}
+                        <strong>{{ version_status.latest_version }}</strong>
+                        <span class="text-muted">({{ __('installed', 'securescan') }} {{ version_status.installed_version }})</span>
+                    </div>
+                    <a class="btn btn-sm btn-outline-warning" href="{{ version_status.release_url|e }}" target="_blank" rel="noopener noreferrer">{{ __('View release', 'securescan') }}</a>
+                </div>
+            {% else %}
+                <div class="text-muted small">
+                    {{ __('SecureScan is up to date.', 'securescan') }} <strong>{{ version_status.installed_version }}</strong>
+                    · {{ __('Latest stable', 'securescan') }} <strong>{{ version_status.latest_version }}</strong>
+                    · <a href="{{ version_status.release_url|e }}" target="_blank" rel="noopener noreferrer">{{ __('View releases', 'securescan') }}</a>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-muted small">
+                {{ __('GitHub version check is currently unavailable.', 'securescan') }}
+                · <a href="https://github.com/monta990/securescan/releases" target="_blank" rel="noopener noreferrer">{{ __('View releases', 'securescan') }}</a>
+            </div>
+        {% endif %}
     </div>
     {% if can_edit %}
     <form name="form" action="{{ path('/plugins/securescan/Config/Save') }}" method="POST">

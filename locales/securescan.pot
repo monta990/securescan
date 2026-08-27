@@ -1,67 +1,110 @@
-msgid ""
-msgstr ""
-"Project-Id-Version: SecureScan\n"
-"Report-Msgid-Bugs-To: \n"
-"Language: en_GB\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-
 msgid "SecureScan"
 msgstr ""
+
 msgid "Analyze every file before it is published using the server antivirus."
 msgstr ""
+
 msgid "Enable scanning before publishing"
 msgstr ""
+
 msgid "The file remains temporary until the antivirus returns a clean result."
 msgstr ""
+
 msgid "Scan command"
 msgstr ""
+
 msgid "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
 msgstr ""
+
 msgid "For security, separators, redirects, substitutions, comments, and shell operators are not allowed."
 msgstr ""
+
 msgid "Test antivirus"
 msgstr ""
+
 msgid "Unable to create the temporary test file."
 msgstr ""
+
 msgid "SecureScan could not access the temporary file."
 msgstr ""
+
 msgid "SecureScan requires the PHP exec() function to be available."
 msgstr ""
+
 msgid "The antivirus command must contain the {file} placeholder."
 msgstr ""
+
 msgid "The command contains forbidden characters or operators."
 msgstr ""
+
+msgid "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
+msgstr ""
+
 msgid "The antivirus responded successfully and the test file is clean."
 msgstr ""
+
 msgid "The antivirus detected a threat. The file was rejected."
 msgstr ""
+
 msgid "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
 msgstr ""
+
 msgid "The antivirus command cannot be empty."
 msgstr ""
+
 msgid "SecureScan configuration could not be saved."
 msgstr ""
+
 msgid "SecureScan configuration saved successfully."
 msgstr ""
+
 msgid "Unable to write the temporary test file."
 msgstr ""
+
 msgid "SecureScan could not locate the temporary uploaded file."
 msgstr ""
+
 msgid "Run Test antivirus successfully before enabling scanning."
 msgstr ""
+
 msgid "You must run Test antivirus successfully for the current command before enabling scanning."
 msgstr ""
+
 msgid "Run Test antivirus successfully for the current command before enabling scanning."
 msgstr ""
+
 msgid "The antivirus test succeeded, but SecureScan could not save the test result."
 msgstr ""
+
 msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
 msgstr ""
+
 msgid "Go to logs"
 msgstr ""
+
 msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
 msgstr ""
+
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
+msgstr ""
+
+msgid "A new SecureScan version is available."
+msgstr ""
+
+msgid "installed"
+msgstr ""
+
+msgid "View release"
+msgstr ""
+
+msgid "SecureScan is up to date."
+msgstr ""
+
+msgid "Latest stable"
+msgstr ""
+
+msgid "View releases"
+msgstr ""
+
+msgid "GitHub version check is currently unavailable."
 msgstr ""
