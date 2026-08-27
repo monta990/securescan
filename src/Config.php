@@ -8,6 +8,7 @@ final class Config extends \Config
     public const CONTEXT = 'plugin:securescan';
     public const DEFAULT_COMMAND = 'clamdscan --no-summary {file}';
     public static function getTypeName($nb = 0) { return __('SecureScan', 'securescan'); }
+    public static function getIcon(): string { return 'ti ti-shield-check'; }
     public static function getConfig(): array {
         return array_merge(['securescan_enabled'=>0,'securescan_command'=>self::DEFAULT_COMMAND,'securescan_tested_hash'=>''], \Config::getConfigurationValues(self::CONTEXT));
     }
