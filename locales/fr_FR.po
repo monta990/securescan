@@ -1,0 +1,49 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: SecureScan 0.1.24\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "SecureScan"
+msgstr "SecureScan"
+
+msgid "Antivirus command"
+msgstr "Commande antivirus"
+
+msgid "Enable antivirus scanning"
+msgstr "Activer l'analyse antivirus"
+
+msgid "Test antivirus"
+msgstr "Tester l'antivirus"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "The antivirus test completed successfully."
+msgstr "Le test antivirus s'est terminé avec succès."
+
+msgid "The antivirus detected a threat. The file was rejected."
+msgstr "L'antivirus a détecté une menace. Le fichier a été rejeté."
+
+msgid "SecureScan could not complete the antivirus scan."
+msgstr "SecureScan n'a pas pu terminer l'analyse antivirus."
+
+msgid "Run the antivirus test successfully for the current command before enabling scanning."
+msgstr "Exécutez correctement le test antivirus pour la commande actuelle avant d'activer l'analyse."
+
+msgid "Clean"
+msgstr "Sain"
+
+msgid "Infected"
+msgstr "Infecté"
+
+msgid "Audit log"
+msgstr "Journal d'audit"
+
+msgid "Security"
+msgstr "Sécurité"
+
+msgid "Configuration"
+msgstr "Configuration"
