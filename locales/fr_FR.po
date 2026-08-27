@@ -47,3 +47,6 @@ msgstr "Sécurité"
 
 msgid "Configuration"
 msgstr "Configuration"
+
+msgid "Go to logs"
+msgstr "Voir les journaux"
