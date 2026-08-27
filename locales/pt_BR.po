@@ -47,3 +47,6 @@ msgstr "Segurança"
 
 msgid "Configuration"
 msgstr "Configuração"
+
+msgid "Go to logs"
+msgstr "Ir para os registros"
