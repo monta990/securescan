@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <key>securescan</key>
+  <name>SecureScan</name>
+  <state>stable</state>
+  <version>0.1.24</version>
+  <author>Edwin Elias Alvarez</author>
+  <license>GPLv3+</license>
+  <homepage>https://github.com/monta990/securescan</homepage>
+  <compatibility>~11.0.0</compatibility>
+  <compatibility>~12.0.0</compatibility>
+</plugin>
