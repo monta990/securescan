@@ -1,0 +1,93 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: SecureScan\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "SecureScan"
+msgstr "SecureScan"
+
+msgid "Analyze every file before it is published using the server antivirus."
+msgstr "Analyze every file before it is published using the server antivirus."
+
+msgid "Enable scanning before publishing"
+msgstr "Enable scanning before publishing"
+
+msgid "The file remains temporary until the antivirus returns a clean result."
+msgstr "The file remains temporary until the antivirus returns a clean result."
+
+msgid "Scan command"
+msgstr "Scan command"
+
+msgid "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
+msgstr "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
+
+msgid "For security, separators, redirects, substitutions, comments, and shell operators are not allowed."
+msgstr "For security, separators, redirects, substitutions, comments, and shell operators are not allowed."
+
+msgid "Test antivirus"
+msgstr "Test antivirus"
+
+msgid "Unable to create the temporary test file."
+msgstr "Unable to create the temporary test file."
+
+msgid "SecureScan could not access the temporary file."
+msgstr "SecureScan could not access the temporary file."
+
+msgid "SecureScan requires the PHP exec() function to be available."
+msgstr "SecureScan requires the PHP exec() function to be available."
+
+msgid "The antivirus command must contain the {file} placeholder."
+msgstr "The antivirus command must contain the {file} placeholder."
+
+msgid "The command contains forbidden characters or operators."
+msgstr "The command contains forbidden characters or operators."
+
+msgid "The antivirus responded successfully and the test file is clean."
+msgstr "The antivirus responded successfully and the test file is clean."
+
+msgid "The antivirus detected a threat. The file was rejected."
+msgstr "The antivirus detected a threat. The file was rejected."
+
+msgid "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
+msgstr "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
+
+msgid "The antivirus command cannot be empty."
+msgstr "The antivirus command cannot be empty."
+
+msgid "SecureScan configuration could not be saved."
+msgstr "SecureScan configuration could not be saved."
+
+msgid "SecureScan configuration saved successfully."
+msgstr "SecureScan configuration saved successfully."
+
+msgid "Unable to write the temporary test file."
+msgstr "Unable to write the temporary test file."
+
+msgid "SecureScan could not locate the temporary uploaded file."
+msgstr "SecureScan could not locate the temporary uploaded file."
+
+msgid "Run Test antivirus successfully before enabling scanning."
+msgstr "Run Test antivirus successfully before enabling scanning."
+
+msgid "You must run Test antivirus successfully for the current command before enabling scanning."
+msgstr "You must run Test antivirus successfully for the current command before enabling scanning."
+
+msgid "Run Test antivirus successfully for the current command before enabling scanning."
+msgstr "Run Test antivirus successfully for the current command before enabling scanning."
+
+msgid "The antivirus test succeeded, but SecureScan could not save the test result."
+msgstr "The antivirus test succeeded, but SecureScan could not save the test result."
+
+msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
+msgstr "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
+
+msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
+msgstr "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
+
+msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
+msgstr "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
