@@ -1,12 +1,18 @@
+
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan 0.1.25\n"
+"Project-Id-Version: SecureScan 1.0.1\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-28 14:32+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es_MX\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: es_MX <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
 
 msgid "SecureScan"
 msgstr "SecureScan"
@@ -23,6 +29,7 @@ msgstr "El archivo permanece temporal hasta que el antivirus devuelve un resulta
 msgid "Scan command"
 msgstr "Comando de análisis"
 
+#, python-brace-format
 msgid "Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}."
 msgstr "Use {file} como marcador del archivo temporal. Predeterminado: clamdscan --no-summary {file}."
 
@@ -41,14 +48,19 @@ msgstr "SecureScan no pudo acceder al archivo temporal."
 msgid "SecureScan requires the PHP exec() function to be available."
 msgstr "SecureScan requiere que la función PHP exec() esté disponible."
 
+#, python-brace-format
 msgid "The antivirus command must contain the {file} placeholder."
 msgstr "El comando del antivirus debe contener el marcador {file}."
 
 msgid "The command contains forbidden characters or operators."
 msgstr "El comando contiene caracteres u operadores no permitidos."
 
-msgid "SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions."
-msgstr "SecureScan no pudo encontrar el ejecutable del antivirus para el proceso de PHP. Verifique la ruta del comando y los permisos del usuario del servidor web/PHP."
+msgid ""
+"SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web "
+"server/PHP user permissions."
+msgstr ""
+"SecureScan no pudo encontrar el ejecutable del antivirus para el proceso de PHP. Verifique la ruta del comando y los "
+"permisos del usuario del servidor web/PHP."
 
 msgid "The antivirus responded successfully and the test file is clean."
 msgstr "El antivirus respondió correctamente y el archivo de prueba está limpio."
@@ -56,6 +68,7 @@ msgstr "El antivirus respondió correctamente y el archivo de prueba está limpi
 msgid "The antivirus detected a threat. The file was rejected."
 msgstr "El antivirus detectó una amenaza. El archivo fue rechazado."
 
+#, python-format
 msgid "SecureScan could not complete the antivirus scan (code %d). The file was rejected."
 msgstr "SecureScan no pudo completar el análisis del antivirus (código %d). El archivo fue rechazado."
 
@@ -87,14 +100,18 @@ msgid "The antivirus test succeeded, but SecureScan could not save the test resu
 msgstr "La prueba del antivirus fue correcta, pero SecureScan no pudo guardar el resultado de la prueba."
 
 msgid "Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged."
-msgstr "Los resultados de los análisis de documentos se registran en el archivo de logs de GLPI: files/_log/securescan.log. Nunca se registra el contenido de los archivos."
+msgstr ""
+"Los resultados de los análisis de documentos se registran en el archivo de logs de GLPI: files/_log/securescan.log. "
+"Nunca se registra el contenido de los archivos."
 
 msgid "Go to logs"
 msgstr "Ir a registros"
 
+#, python-format
 msgid "SecureScan: file scanned successfully and stored. Result: clean. SHA-256: %s"
 msgstr "SecureScan: archivo analizado correctamente y almacenado. Resultado: limpio. SHA-256: %s"
 
+#, python-format
 msgid "SecureScan: file scanned and stored. Result: %s. SHA-256: %s"
 msgstr "SecureScan: archivo analizado y almacenado. Resultado: %s. SHA-256: %s"
 
@@ -118,3 +135,63 @@ msgstr "Ver versiones"
 
 msgid "GitHub version check is currently unavailable."
 msgstr "El verificador de versiones de GitHub no está disponible actualmente."
+
+msgid ""
+"The command is executed without a shell. Shell separators, redirects, substitutions, comments, and operators are not "
+"interpreted."
+msgstr ""
+"El comando se ejecuta sin un shell. Los separadores, redirecciones, sustituciones, comentarios y operadores de shell "
+"no se interpretan."
+
+#, python-brace-format
+msgid "The antivirus command must contain one standalone {file} placeholder and use a valid executable path."
+msgstr ""
+"El comando del antivirus debe contener un único marcador {file} independiente y utilizar una ruta de ejecutable "
+"válida."
+
+msgid "SecureScan could not start the antivirus process."
+msgstr "SecureScan no pudo iniciar el proceso del antivirus."
+
+#, python-format
+msgid "The antivirus scan exceeded the configured timeout of %d seconds. The file was rejected."
+msgstr "El análisis del antivirus excedió el tiempo de espera configurado de %d segundos. El archivo fue rechazado."
+
+msgid "Antivirus timeout (seconds)"
+msgstr "Tiempo de espera del antivirus (segundos)"
+
+msgid "Default: 30 seconds. Allowed range: 5 to 300 seconds. A timeout rejects the file."
+msgstr "Predeterminado: 30 segundos. Rango permitido: 5 a 300 segundos. Un tiempo de espera rechaza el archivo."
+
+msgid "Automatically check for new SecureScan versions"
+msgstr "Comprobar automáticamente nuevas versiones de SecureScan"
+
+msgid "When enabled, SecureScan checks GitHub for stable releases. Checks are cached and do not run on every page load."
+msgstr ""
+"Al habilitarlo, SecureScan consulta GitHub para buscar versiones estables. Las comprobaciones se almacenan en caché y"
+" no se ejecutan en cada carga de página."
+
+msgid "Automatic version checks are disabled."
+msgstr "Las comprobaciones automáticas de versiones están deshabilitadas."
+
+msgid "Allowed antivirus executables"
+msgstr "Ejecutables de antivirus permitidos"
+
+msgid ""
+"Enter one executable name or absolute path per line. The configured command must use an executable from this allow-"
+"list. Default: clamdscan."
+msgstr ""
+"Ingrese un nombre de ejecutable o una ruta absoluta por línea. El comando configurado debe utilizar un ejecutable de "
+"esta lista permitida. Predeterminado: clamdscan."
+
+msgid "The antivirus command is invalid or the executable is not a supported ClamAV scanner."
+msgstr "El comando del antivirus no es válido o el ejecutable no está en la lista permitida de SecureScan."
+
+msgid "SecureScan requires the PHP proc_open() function to be available."
+msgstr "SecureScan requiere que la función PHP proc_open() esté disponible."
+
+
+msgid "SecureScan validates the antivirus executable automatically and only allows configured antivirus programs to run."
+msgstr "SecureScan valida el ejecutable del antivirus automáticamente y solo permite ejecutar programas antivirus configurados."
+
+msgid "SecureScan currently supports ClamAV only. The executable is validated automatically and must be clamdscan or clamscan."
+msgstr "SecureScan actualmente solo es compatible con ClamAV. El ejecutable se valida automáticamente y debe ser clamdscan o clamscan."

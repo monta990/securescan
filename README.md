@@ -6,7 +6,7 @@
   <strong>GLPI plugin — Antivirus scanning for uploaded files before they are stored</strong>
 </p>
 <p align="center">
-  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue" alt="GLPI 11 compatibility"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0.7%2B-blue" alt="GLPI 11 compatibility"></a>
   <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-12.0%2B-blue" alt="GLPI 12 compatibility"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v3%2B-green" alt="License"></a>
   <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple" alt="PHP"></a>
@@ -21,7 +21,7 @@
 
 The plugin is designed to keep the antivirus operation isolated from GLPI's core code and to use GLPI's native configuration, authorization, routing, CSRF protection, translations, and history mechanisms wherever applicable.
 
-The default integration is designed for **ClamAV / `clamdscan`**, while the analysis command is configurable from the plugin configuration page.
+SecureScan currently supports **ClamAV only**, using the `clamdscan` or `clamscan` command-line scanners. The analysis command remains configurable from the plugin configuration page.
 
 ---
 
@@ -48,9 +48,9 @@ A successful antivirus test is required before enabling the protection. This pre
 | Feature | Details |
 |---|---|
 | **Pre-storage scanning** | Uploaded files are inspected before they become stored GLPI documents. |
-| **ClamAV integration** | Supports commands such as `clamdscan --no-summary {file}`. |
+| **ClamAV integration** | Supports ClamAV scanners such as `clamdscan --no-summary {file}` and `clamscan --no-summary {file}`. |
 | **Configurable scanner command** | The administrator can configure the antivirus command and use `{file}` as the temporary-file placeholder. |
-| **Command hardening** | The configured command is validated and restricted; shell separators, redirections, substitutions, and shell operators are not accepted. |
+| **Command hardening** | The configured command is parsed into a direct argument vector and executed without a shell. Shell separators, substitutions, redirections, and operators are not interpreted. |
 | **Temporary-file isolation** | The uploaded file is kept in a temporary location while the antivirus result is obtained. |
 | **Infected-file rejection** | A positive antivirus result prevents the file from being stored. |
 | **Fail-closed behavior** | Scanner execution failures do not silently allow the file through. |
@@ -62,7 +62,7 @@ A successful antivirus test is required before enabling the protection. This pre
 | **GLPI history compatibility** | Security-related document activity can be correlated with the normal GLPI history of the affected object. |
 | **Multilanguage UI** | User-facing messages are translation-ready and follow the current GLPI language. |
 | **Native GLPI integration** | Configuration and controllers use GLPI's current plugin architecture instead of modifying GLPI core files. |
-| **GLPI 11 / 12 targeting** | The current package metadata declares compatibility with GLPI 11.x and 12.x. |
+| **GLPI 11 / 12 targeting** | The current package metadata declares compatibility with GLPI 11.x (11.0.7+) and 12.x. |
 
 ---
 
@@ -128,7 +128,7 @@ For security, SecureScan does not treat the configured command as an unrestricte
 - shell boolean operators (`&&`, `||`)
 - other shell constructs that would turn the configuration field into arbitrary command execution
 
-The scanner executable and arguments therefore remain part of a controlled configuration rather than becoming a general-purpose shell entry point.
+The ClamAV scanner executable and arguments are converted into a direct argument vector and executed without a shell. The executable is validated automatically and must be `clamdscan` or `clamscan`, including an absolute path to one of those binaries. Basenames are resolved only from fixed system directories; explicit absolute paths must resolve to approved scanner binaries. This prevents shell metacharacters from becoming a second command language while keeping the configuration simple for administrators.
 
 > The exact command accepted by SecureScan depends on the command validation implemented by the installed plugin version. Always test the command from **Setup → Plugins → SecureScan → Configure** before enabling protection.
 
@@ -165,6 +165,18 @@ The **Test antivirus** action creates a controlled temporary test file and execu
 A successful test verifies that the configured command can be executed and returns an acceptable clean result. The test result is recorded independently from normal document scans.
 
 If the test fails, SecureScan reports the scanner execution problem and the protection cannot be enabled for that command.
+
+### ClamAV executable validation
+
+SecureScan currently supports ClamAV only. The executable is validated automatically when the command is saved or tested and must be `clamdscan` or `clamscan`, or an absolute path to one of those executables. The administrator does not need to maintain a separate executable list. This security control is kept internally so the configuration remains simple while preventing the command field from being used to launch arbitrary programs.
+
+### Antivirus timeout
+
+Controls how long SecureScan waits for the antivirus process. The default is **30 seconds** and the allowed range is **5 to 300 seconds**. A timeout is treated as a scan error and the file is rejected.
+
+### Automatic version checks
+
+Automatic GitHub stable-release checks are **disabled by default**. When enabled, SecureScan caches successful checks for six hours and failed checks for 30 minutes so an unavailable GitHub service does not block normal configuration-page rendering on every request.
 
 ### Save
 
@@ -325,7 +337,7 @@ Messages shown to users are translation-ready and follow the active GLPI languag
 |---|---|
 | **GLPI** | 11.x / 12.x |
 | **PHP** | ≥ 8.2 |
-| **Antivirus engine** | ClamAV recommended |
+| **Antivirus engine** | ClamAV only |
 | **Scanner command** | A working command that accepts the `{file}` placeholder |
 | **Server permissions** | The PHP/web-server account must be able to execute the scanner and access the temporary upload location |
 
@@ -487,10 +499,10 @@ This is the expected result. A rejected EICAR upload confirms that the detection
 
 The current plugin metadata declares:
 
-- **GLPI 11.x**
+- **GLPI 11.x (11.0.7+)**
 - **GLPI 12.x**
 - **PHP ≥ 8.2**
-- **SecureScan 0.1.24**
+- **SecureScan 1.0.0**
 
 Compatibility is maintained against the GLPI APIs and plugin architecture targeted by the current release.
 

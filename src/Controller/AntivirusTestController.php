@@ -18,32 +18,39 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class AntivirusTestController extends AbstractController
 {
-    #[Route('/Antivirus/Test', name: 'securescan_antivirus_test', methods: ['GET', 'POST'])]
+    #[Route('/Antivirus/Test', name: 'securescan_antivirus_test', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         $this->checkAccess();
 
-        if (!$request->isMethod('POST')) {
-            return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
-        }
 
+        $config = SecureScanConfig::getConfig();
         $command = trim($request->request->getString('securescan_command'));
         if ($command === '') {
-            $command = (string) SecureScanConfig::getConfig()['securescan_command'];
+            $command = (string) $config['securescan_command'];
         }
+        $timeout = max(5, min(300, $request->request->getInt('securescan_timeout', (int) ($config['securescan_timeout'] ?? 30))));
+        // ClamAV scanner selection is an internal security control, not a normal UI setting.
+        $allowedExecutables = trim((string) ($config['securescan_allowed_executables'] ?? 'clamdscan'));
 
-        $result = Antivirus::test($command);
+        $result = Antivirus::test($command, $timeout, $allowedExecutables);
 
         if ($result['ok']) {
             try {
                 SecureScanConfig::save(
-                    (int) (SecureScanConfig::getConfig()['securescan_enabled'] ?? 0),
+                    (int) ($config['securescan_enabled'] ?? 0),
                     $command,
-                    hash('sha256', $command)
+                    Antivirus::getTestedConfigurationHash($command, $allowedExecutables),
+                    $timeout,
+                    $allowedExecutables,
+                    (int) ($config['securescan_auto_update_check'] ?? 0)
                 );
                 $savedConfig = SecureScanConfig::getConfig();
                 $stored = (string) ($savedConfig['securescan_command'] ?? '') === $command
-                    && (string) ($savedConfig['securescan_tested_hash'] ?? '') === hash('sha256', $command);
+                    && (string) ($savedConfig['securescan_tested_hash'] ?? '') === Antivirus::getTestedConfigurationHash($command, $allowedExecutables)
+                    && (int) ($savedConfig['securescan_timeout'] ?? 0) === $timeout
+                    && (string) ($savedConfig['securescan_allowed_executables'] ?? '') === $allowedExecutables
+                    && (int) ($savedConfig['securescan_auto_update_check'] ?? 0) === (int) ($config['securescan_auto_update_check'] ?? 0);
             } catch (\Throwable $e) {
                 \Toolbox::logDebug($e);
                 $stored = false;
@@ -51,7 +58,7 @@ final class AntivirusTestController extends AbstractController
 
             if (!$stored) {
                 $result['ok'] = false;
-                $result['message'] = __('The antivirus test succeeded, but SecureScan could not save the test result.', 'securescan');
+                $result['message'] = __s('The antivirus test succeeded, but SecureScan could not save the test result.', 'securescan');
             }
         }
 

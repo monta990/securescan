@@ -49,15 +49,21 @@ final class Config extends \Config
             'securescan_enabled'     => 0,
             'securescan_command'     => self::DEFAULT_COMMAND,
             'securescan_tested_hash' => '',
+            'securescan_timeout' => 30,
+            'securescan_allowed_executables' => 'clamdscan',
+            'securescan_auto_update_check' => 0,
         ], $config);
     }
 
-    public static function save(int $enabled, string $command, string $testedHash): void
+    public static function save(int $enabled, string $command, string $testedHash, int $timeout = 30, string $allowedExecutables = 'clamdscan', int $autoUpdateCheck = 0): void
     {
         \Config::setConfigurationValues(self::CONTEXT, [
             'securescan_enabled'     => $enabled,
             'securescan_command'     => $command,
             'securescan_tested_hash' => $testedHash,
+            'securescan_timeout' => $timeout,
+            'securescan_allowed_executables' => $allowedExecutables,
+            'securescan_auto_update_check' => $autoUpdateCheck,
         ]);
     }
 
@@ -91,7 +97,9 @@ final class Config extends \Config
         TemplateRenderer::getInstance()->display('@securescan/config.html.twig', [
             'current_config'  => self::getConfig(),
             'can_edit'        => true,
-            'version_status'  => VersionChecker::check(),
+            'version_status'  => (int) (self::getConfig()['securescan_auto_update_check'] ?? 0) === 1
+                ? VersionChecker::check()
+                : null,
         ]);
     }
 

@@ -24,13 +24,14 @@ use GlpiPlugin\Securescan\Config as SecureScanConfig;
 use function Safe\define;
 
 define('PLUGIN_SECURESCAN_VERSION', '1.0.0');
-define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.0');
+define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.7');
 define('PLUGIN_SECURESCAN_MAX_GLPI_VERSION', '12.99.99');
 define('PLUGIN_SECURESCAN_MIN_PHP_VERSION', '8.2.0');
 
 function plugin_init_securescan(): void
 {
     global $PLUGIN_HOOKS;
+
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['securescan'] = [
         \Document::class => [

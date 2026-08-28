@@ -34,7 +34,12 @@ final class Antivirus
      *
      * @var array<int, array{status: string, sha256: ?string, size: ?int}>
      */
-    private static array $pendingScans = [];
+    private static ?\WeakMap $pendingScans = null;
+
+    private static function getPendingScans(): \WeakMap
+    {
+        return self::$pendingScans ??= new \WeakMap();
+    }
 
     /**
      * Scan a new Document upload before Document::prepareInputForAdd().
@@ -79,12 +84,18 @@ final class Antivirus
             return;
         }
 
-        $result = self::scan($upload['path'], (string) $config['securescan_command']);
+        $result = self::scan(
+            $upload['path'],
+            (string) $config['securescan_command'],
+            false,
+            (int) ($config['securescan_timeout'] ?? 30),
+            (string) ($config['securescan_allowed_executables'] ?? 'clamdscan')
+        );
 
         Audit::record('document', $result, $upload['path'], $item);
 
         if ($result['ok']) {
-            self::$pendingScans[spl_object_id($item)] = [
+            self::getPendingScans()[$item] = [
                 'status' => (string) ($result['status'] ?? 'clean'),
                 'sha256' => is_file($upload['path']) ? hash_file('sha256', $upload['path']) : null,
                 'size'   => is_file($upload['path']) ? filesize($upload['path']) : null,
@@ -118,13 +129,13 @@ final class Antivirus
             return;
         }
 
-        $key = spl_object_id($item);
-        if (!isset(self::$pendingScans[$key])) {
+        $pendingScans = self::getPendingScans();
+        if (!isset($pendingScans[$item])) {
             return;
         }
 
-        $pending = self::$pendingScans[$key];
-        unset(self::$pendingScans[$key]);
+        $pending = $pendingScans[$item];
+        unset($pendingScans[$item]);
 
         Audit::recordStored(
             'document_stored',
@@ -135,14 +146,14 @@ final class Antivirus
         );
     }
 
-    public static function test(string $command): array
+    public static function test(string $command, int $timeout = 30, string $allowedExecutables = 'clamdscan'): array
     {
         $tmp = tempnam(sys_get_temp_dir(), 'securescan_');
 
         if ($tmp === false) {
             return [
                 'ok'      => false,
-                'message' => __('Unable to create the temporary test file.', 'securescan'),
+                'message' => __s('Unable to create the temporary test file.', 'securescan'),
             ];
         }
 
@@ -150,11 +161,11 @@ final class Antivirus
             if (file_put_contents($tmp, "SecureScan antivirus test\n") === false) {
                 return [
                     'ok'      => false,
-                    'message' => __('Unable to write the temporary test file.', 'securescan'),
+                    'message' => __s('Unable to write the temporary test file.', 'securescan'),
                 ];
             }
 
-            $result = self::scan($tmp, $command, true);
+            $result = self::scan($tmp, $command, true, $timeout, $allowedExecutables);
             Audit::record('test', $result, $tmp);
             return $result;
         } finally {
@@ -169,7 +180,7 @@ final class Antivirus
         }
 
         // PRE_ITEM_ADD/PRE_ITEM_UPDATE: an empty input array stops the operation.
-        $item->input = [];
+        $item->input = false;
 
         Session::addMessageAfterRedirect($message, false, ERROR);
     }
@@ -221,67 +232,160 @@ final class Antivirus
     /**
      * @return array{ok: bool, message: string, status?: string, output?: string, exit_code?: int}
      */
-    private static function scan(string $file, string $template, bool $test = false): array
+    private static function scan(string $file, string $template, bool $test = false, int $timeout = 30, string $allowedExecutables = 'clamdscan'): array
     {
         if (!is_file($file) || !is_readable($file)) {
             return [
                 'ok'      => false,
-                'message' => __('SecureScan could not access the temporary file.', 'securescan'),
-            ];
-        }
-
-        if (!function_exists('exec')) {
-            return [
-                'ok'      => false,
-                'message' => __('SecureScan requires the PHP exec() function to be available.', 'securescan'),
-            ];
-        }
-
-        if (strpos($template, '{file}') === false) {
-            return [
-                'ok'      => false,
-                'message' => __('The antivirus command must contain the {file} placeholder.', 'securescan'),
-            ];
-        }
-
-        if (!self::isSafeTemplate($template)) {
-            return [
-                'ok'      => false,
-                'message' => __('The command contains forbidden characters or operators.', 'securescan'),
-            ];
-        }
-
-        $resolvedTemplate = self::resolveExecutable($template);
-        if ($resolvedTemplate === null) {
-            return [
-                'ok'      => false,
-                'message' => __('SecureScan could not find the antivirus executable for the PHP process. Verify the command path and the web server/PHP user permissions.', 'securescan'),
+                'message' => __s('SecureScan could not access the temporary file.', 'securescan'),
                 'status'  => 'error',
                 'output'  => '',
                 'exit_code' => 255,
             ];
         }
 
-        $command = str_replace(
-            '{file}',
-            escapeshellarg($file),
-            $resolvedTemplate
-        );
+        $timeout = max(5, min(300, $timeout));
+        if (!function_exists('proc_open')) {
+            return [
+                'ok'      => false,
+                'message' => __s('SecureScan requires the PHP proc_open() function to be available.', 'securescan'),
+                'status'  => 'error',
+                'output'  => '',
+                'exit_code' => 255,
+            ];
+        }
 
-        $output = [];
-        $exitCode = 255;
+        $argv = self::buildCommandArgv($template, $file, $allowedExecutables);
+        if ($argv === null) {
+            return [
+                'ok'      => false,
+                'message' => __s('The antivirus command is invalid or the executable is not a supported ClamAV scanner.', 'securescan'),
+                'status'  => 'error',
+                'output'  => '',
+                'exit_code' => 255,
+            ];
+        }
 
-        exec($command . ' 2>&1', $output, $exitCode);
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $pipes = [];
+        $process = @proc_open($argv, $descriptors, $pipes, null, null, ['suppress_errors' => true]);
+        if (!is_resource($process)) {
+            return [
+                'ok'      => false,
+                'message' => __s('SecureScan could not start the antivirus process.', 'securescan'),
+                'status'  => 'error',
+                'output'  => '',
+                'exit_code' => 255,
+            ];
+        }
+
+        if (isset($pipes[0]) && is_resource($pipes[0])) {
+            fclose($pipes[0]);
+        }
+
+        foreach ([1, 2] as $pipeId) {
+            if (isset($pipes[$pipeId]) && is_resource($pipes[$pipeId])) {
+                stream_set_blocking($pipes[$pipeId], false);
+            }
+        }
+
+        $output = '';
+        $timedOut = false;
+        $startedAt = microtime(true);
+        $maxOutputBytes = 65536;
+
+        while (true) {
+            $status = proc_get_status($process);
+            $running = (bool) ($status['running'] ?? false);
+
+            foreach ([1, 2] as $pipeId) {
+                if (!isset($pipes[$pipeId]) || !is_resource($pipes[$pipeId])) {
+                    continue;
+                }
+                $chunk = stream_get_contents($pipes[$pipeId]);
+                if ($chunk !== false && $chunk !== '') {
+                    $remaining = $maxOutputBytes - strlen($output);
+                    if ($remaining > 0) {
+                        $output .= substr($chunk, 0, $remaining);
+                    }
+                }
+            }
+
+            if (!$running) {
+                $exitCode = (int) ($status['exitcode'] ?? -1);
+                if ($exitCode < 0) {
+                    $exitCode = (int) proc_close($process);
+                } else {
+                    proc_close($process);
+                }
+                break;
+            }
+
+            if ((microtime(true) - $startedAt) >= $timeout) {
+                $timedOut = true;
+                @proc_terminate($process, 15);
+                usleep(250000);
+                $status = proc_get_status($process);
+                if (($status['running'] ?? false) === true) {
+                    @proc_terminate($process, 9);
+                }
+                $exitCode = 124;
+                proc_close($process);
+                break;
+            }
+
+            $read = [];
+            foreach ([1, 2] as $pipeId) {
+                if (isset($pipes[$pipeId]) && is_resource($pipes[$pipeId])) {
+                    $read[] = $pipes[$pipeId];
+                }
+            }
+            if ($read !== []) {
+                $write = null;
+                $except = null;
+                @stream_select($read, $write, $except, 0, 100000);
+            } else {
+                usleep(100000);
+            }
+        }
+
+        foreach ([1, 2] as $pipeId) {
+            if (isset($pipes[$pipeId]) && is_resource($pipes[$pipeId])) {
+                $chunk = stream_get_contents($pipes[$pipeId]);
+                if ($chunk !== false && $chunk !== '') {
+                    $remaining = $maxOutputBytes - strlen($output);
+                    if ($remaining > 0) {
+                        $output .= substr($chunk, 0, $remaining);
+                    }
+                }
+                fclose($pipes[$pipeId]);
+            }
+        }
+
+        if ($timedOut) {
+            return [
+                'ok' => false,
+                'message' => sprintf(__s('The antivirus scan exceeded the configured timeout of %d seconds. The file was rejected.', 'securescan'), $timeout),
+                'status' => 'error',
+                'output' => $output,
+                'exit_code' => $exitCode,
+            ];
+        }
 
         // ClamAV convention: 0 = clean, 1 = infected, 2+ = scan error.
         if ($exitCode === 0) {
             return [
                 'ok'      => true,
                 'message' => $test
-                    ? __('The antivirus responded successfully and the test file is clean.', 'securescan')
+                    ? __s('The antivirus responded successfully and the test file is clean.', 'securescan')
                     : '',
                 'status'  => 'clean',
-                'output'  => implode("\n", $output),
+                'output'  => $output,
                 'exit_code' => $exitCode,
             ];
         }
@@ -289,9 +393,9 @@ final class Antivirus
         if ($exitCode === 1) {
             return [
                 'ok'      => false,
-                'message' => __('The antivirus detected a threat. The file was rejected.', 'securescan'),
+                'message' => __s('The antivirus detected a threat. The file was rejected.', 'securescan'),
                 'status'  => 'infected',
-                'output'  => implode("\n", $output),
+                'output'  => $output,
                 'exit_code' => $exitCode,
             ];
         }
@@ -299,66 +403,164 @@ final class Antivirus
         return [
             'ok'      => false,
             'message' => sprintf(
-                __('SecureScan could not complete the antivirus scan (code %d). The file was rejected.', 'securescan'),
+                __s('SecureScan could not complete the antivirus scan (code %d). The file was rejected.', 'securescan'),
                 $exitCode
             ),
             'status'  => 'error',
-            'output'  => implode("\n", $output),
+            'output'  => $output,
             'exit_code' => $exitCode,
         ];
     }
 
     /**
-     * Resolve the executable independently of the restricted PATH commonly
-     * inherited by PHP-FPM/Apache. The configured command itself remains
-     * unchanged in GLPI; only the executable used for this invocation is
-     * converted to an absolute path when it can be found.
+     * Convert the administrator's ClamAV command line into a direct argv array.
+     * No shell is used; the executable is resolved only from fixed system
+     * directories when a basename is configured.
      */
-    private static function resolveExecutable(string $template): ?string
+    private static function buildCommandArgv(string $template, string $file, string $allowedExecutables): ?array
     {
-        if (!preg_match('/^\s*(\S+)(.*)$/s', $template, $matches)) {
+        $tokens = self::tokenizeCommand($template);
+        if ($tokens === null || $tokens === [] || count(array_keys($tokens, '{file}', true)) !== 1) {
             return null;
         }
 
-        $executable = $matches[1];
-        $arguments = $matches[2];
-
-        if ($executable === '') {
+        $filePositions = array_keys($tokens, '{file}', true);
+        if (count($filePositions) !== 1) {
             return null;
         }
 
-        if (str_contains($executable, '/') || str_contains($executable, '\\')) {
-            return is_executable($executable) ? $executable . $arguments : null;
+        $tokens[$filePositions[0]] = $file;
+        $executable = $tokens[0] ?? '';
+        if ($executable === '' || $executable === '{file}') {
+            return null;
         }
 
-        $path = getenv('PATH') ?: '';
-        $searchPaths = array_filter(explode(PATH_SEPARATOR, $path));
-        foreach (['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin', '/sbin'] as $candidate) {
-            if (!in_array($candidate, $searchPaths, true)) {
-                $searchPaths[] = $candidate;
+        $allowlist = ['clamdscan', 'clamscan'];
+        if (!self::isExecutableAllowed($executable, $allowlist)) {
+            return null;
+        }
+
+        $resolved = self::resolveExecutablePath($executable);
+        if ($resolved === null) {
+            return null;
+        }
+
+        $tokens[0] = $resolved;
+        return $tokens;
+    }
+
+    public static function getTestedConfigurationHash(string $command, string $allowedExecutables): string
+    {
+        return hash('sha256', $command . "\0" . $allowedExecutables);
+    }
+
+    public static function validateCommand(string $command, string $allowedExecutables): ?string
+    {
+        if (self::buildCommandArgv($command, '/dev/null', $allowedExecutables) === null) {
+            return __s('The antivirus command is invalid or the executable is not a supported ClamAV scanner.', 'securescan');
+        }
+        return null;
+    }
+
+    private static function isExecutableAllowed(string $executable, array $allowlist): bool
+    {
+        if (preg_match('/^(?:[A-Za-z]:[\\/]|\/)/', $executable) === 1) {
+            return in_array(basename($executable), $allowlist, true);
+        }
+        return in_array($executable, $allowlist, true);
+    }
+
+    /**
+     * Tokenize a command line without interpreting shell operators.
+     * Single and double quotes group characters. Backslashes are treated as
+     * literal characters because no shell parser is used.
+     */
+    private static function tokenizeCommand(string $template): ?array
+    {
+        if ($template === '' || strpbrk($template, "\0\r\n;&|`$<>#") !== false) {
+            return null;
+        }
+
+        $tokens = [];
+        $token = '';
+        $quote = null;
+        $length = strlen($template);
+        $inToken = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $template[$i];
+            if ($quote !== null) {
+                if ($char === $quote) {
+                    $quote = null;
+                    $inToken = true;
+                    continue;
+                }
+                $token .= $char;
+                $inToken = true;
+                continue;
             }
+
+            if ($char === "'" || $char === '"') {
+                $quote = $char;
+                $inToken = true;
+                continue;
+            }
+
+            if (ctype_space($char)) {
+                if ($inToken) {
+                    $tokens[] = $token;
+                    $token = '';
+                    $inToken = false;
+                }
+                continue;
+            }
+
+            $token .= $char;
+            $inToken = true;
         }
 
-        foreach ($searchPaths as $directory) {
+        if ($quote !== null) {
+            return null;
+        }
+        if ($inToken) {
+            $tokens[] = $token;
+        }
+
+        if (count($tokens) === 0 || count(array_keys($tokens, '{file}', true)) !== 1) {
+            return null;
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * Resolve an executable basename only from fixed system directories.
+     * This avoids trusting the inherited PATH. Absolute paths are accepted
+     * when they point to a regular executable file.
+     */
+    private static function resolveExecutablePath(string $executable): ?string
+    {
+        if (preg_match('~^(?:[A-Za-z]:[\\/]|/)~', $executable) === 1) {
+            return is_file($executable) && is_executable($executable) ? $executable : null;
+        }
+
+        if (preg_match('/^[A-Za-z0-9._-]+$/', $executable) !== 1) {
+            return null;
+        }
+
+        $directories = ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin', '/sbin'];
+        if (defined('PHP_BINDIR')) {
+            $directories[] = PHP_BINDIR;
+        }
+
+        foreach (array_unique($directories) as $directory) {
             $candidate = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $executable;
-            if (is_executable($candidate) && is_file($candidate)) {
-                return $candidate . $arguments;
+            if (is_file($candidate) && is_executable($candidate)) {
+                return $candidate;
             }
         }
 
         return null;
     }
 
-    private static function isSafeTemplate(string $template): bool
-    {
-        if (preg_match('/[;&|`$<>#\x00\r\n]/', $template)) {
-            return false;
-        }
-
-        if (preg_match('/\b(?:rm|mv|cp|del|erase|format|powershell|pwsh|cmd|sh|bash)\b/i', $template)) {
-            return false;
-        }
-
-        return substr_count($template, '{file}') === 1;
-    }
 }

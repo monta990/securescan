@@ -4,6 +4,7 @@ namespace GlpiPlugin\Securescan\Controller;
 
 use Glpi\Controller\AbstractController;
 use GlpiPlugin\Securescan\Config as SecureScanConfig;
+use GlpiPlugin\Securescan\Antivirus as SecureScan;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,21 +18,24 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class ConfigSaveController extends AbstractController
 {
-    #[Route('/Config/Save', name: 'securescan_config_save', methods: ['GET', 'POST'])]
+    #[Route('/Config/Save', name: 'securescan_config_save', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         $this->checkAccess();
 
-        if (!$request->isMethod('POST')) {
-            return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
-        }
 
         $command = trim($request->request->getString('securescan_command'));
         $enabled = $request->request->getInt('securescan_enabled', 0) === 1 ? 1 : 0;
+        $timeout = max(5, min(300, $request->request->getInt('securescan_timeout', 30)));
+        // ClamAV scanner selection is fixed internally; the normal UI does not expose an executable list.
+        // Keep the stored value for backward compatibility with previous SecureScan versions.
+        $storedConfig = SecureScanConfig::getConfig();
+        $allowedExecutables = trim((string) ($storedConfig['securescan_allowed_executables'] ?? 'clamdscan'));
+        $autoUpdateCheck = $request->request->getInt('securescan_auto_update_check', 0) === 1 ? 1 : 0;
 
         if ($command === '') {
             \Session::addMessageAfterRedirect(
-                __('The antivirus command cannot be empty.', 'securescan'),
+                __s('The antivirus command cannot be empty.', 'securescan'),
                 false,
                 ERROR
             );
@@ -39,9 +43,15 @@ final class ConfigSaveController extends AbstractController
             return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
         }
 
-        $current = SecureScanConfig::getConfig();
+        $validationError = SecureScan::validateCommand($command, $allowedExecutables);
+        if ($validationError !== null) {
+            \Session::addMessageAfterRedirect($validationError, false, ERROR);
+            return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
+        }
+
+        $current = $storedConfig;
         $testedHash = (string) ($current['securescan_tested_hash'] ?? '');
-        $commandHash = hash('sha256', $command);
+        $commandHash = SecureScan::getTestedConfigurationHash($command, $allowedExecutables);
 
         if ($command !== (string) ($current['securescan_command'] ?? '')) {
             $testedHash = '';
@@ -49,7 +59,7 @@ final class ConfigSaveController extends AbstractController
 
         if ($enabled === 1 && !hash_equals($testedHash, $commandHash)) {
             \Session::addMessageAfterRedirect(
-                __('Run Test antivirus successfully for the current command before enabling scanning.', 'securescan'),
+                __s('Run Test antivirus successfully for the current command before enabling scanning.', 'securescan'),
                 false,
                 ERROR
             );
@@ -58,11 +68,14 @@ final class ConfigSaveController extends AbstractController
         }
 
         try {
-            SecureScanConfig::save($enabled, $command, $testedHash);
+            SecureScanConfig::save($enabled, $command, $testedHash, $timeout, $allowedExecutables, $autoUpdateCheck);
             $savedConfig = SecureScanConfig::getConfig();
             $saved = (int) ($savedConfig['securescan_enabled'] ?? -1) === $enabled
                 && (string) ($savedConfig['securescan_command'] ?? '') === $command
-                && (string) ($savedConfig['securescan_tested_hash'] ?? '') === $testedHash;
+                && (string) ($savedConfig['securescan_tested_hash'] ?? '') === $testedHash
+                && (int) ($savedConfig['securescan_timeout'] ?? 0) === $timeout
+                && (string) ($savedConfig['securescan_allowed_executables'] ?? '') === $allowedExecutables
+                && (int) ($savedConfig['securescan_auto_update_check'] ?? 0) === $autoUpdateCheck;
         } catch (\Throwable $e) {
             \Toolbox::logDebug($e);
             $saved = false;
@@ -70,8 +83,8 @@ final class ConfigSaveController extends AbstractController
 
         \Session::addMessageAfterRedirect(
             $saved
-                ? __('SecureScan configuration saved successfully.', 'securescan')
-                : __('SecureScan configuration could not be saved.', 'securescan'),
+                ? __s('SecureScan configuration saved successfully.', 'securescan')
+                : __s('SecureScan configuration could not be saved.', 'securescan'),
             false,
             $saved ? INFO : ERROR
         );

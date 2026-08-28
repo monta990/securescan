@@ -13,9 +13,9 @@
     </short>
     <long>
       <en>SecureScan protects GLPI document uploads by scanning files with a configurable antivirus installed on the server before GLPI stores them permanently. The plugin intercepts document creation and replacement, sends the temporary file to the configured antivirus command, rejects infected files or failed scans, and records the result in the GLPI file log and document history. Antivirus scanning is disabled after installation until an administrator successfully validates the configured command.</en>
-      <es>SecureScan protege las cargas de documentos de GLPI analizando los archivos con un antivirus configurable instalado en el servidor antes de que GLPI los almacene permanentemente. El plugin intercepta la creación y sustitución de documentos, envía el archivo temporal al comando de antivirus configurado, rechaza los archivos infectados o los análisis fallidos y registra el resultado en el registro de archivos de GLPI y en el histórico del documento. El análisis antivirus está desactivado después de la instalación hasta que un administrador valide correctamente el comando configurado.</es>
-      <fr>SecureScan protège les téléversements de documents de GLPI en analysant les fichiers avec un antivirus configurable installé sur le serveur avant leur stockage définitif par GLPI. Le plugin intercepte la création et le remplacement des documents, transmet le fichier temporaire à la commande antivirus configurée, rejette les fichiers infectés ou les analyses en échec et enregistre le résultat dans le journal de fichiers de GLPI et dans l'historique du document. L'analyse antivirus est désactivée après l'installation jusqu'à ce qu'un administrateur valide correctement la commande configurée.</fr>
-      <pt>O SecureScan protege os uploads de documentos do GLPI verificando os arquivos com um antivírus configurável instalado no servidor antes que o GLPI os armazene permanentemente. O plugin intercepta a criação e a substituição de documentos, envia o arquivo temporário ao comando de antivírus configurado, rejeita arquivos infectados ou verificações com falha e registra o resultado no log de arquivos do GLPI e no histórico do documento. A verificação antivírus fica desativada após a instalação até que um administrador valide corretamente o comando configurado.</pt>
+      <es>SecureScan protege las cargas de documentos de GLPI analizando los archivos con un antivirus configurable instalado en el servidor antes de que GLPI los almacene permanentemente. El plugin intercepta la creación y sustitución de documentos, envía el archivo temporal al comando de ClamAV configurado, rechaza los archivos infectados o los análisis fallidos y registra el resultado en el registro de archivos de GLPI y en el histórico del documento. Actualmente SecureScan solo es compatible con los analizadores de ClamAV (`clamdscan` y `clamscan`). El análisis antivirus está desactivado después de la instalación hasta que un administrador valide correctamente el comando configurado.</es>
+      <fr>SecureScan protège les téléversements de documents de GLPI en analysant les fichiers avec un antivirus configurable installé sur le serveur avant leur stockage définitif par GLPI. Le plugin intercepte la création et le remplacement des documents, transmet le fichier temporaire à la commande ClamAV configurée, rejette les fichiers infectés ou les analyses en échec et enregistre le résultat dans le journal de fichiers de GLPI et dans l'historique du document. SecureScan prend actuellement en charge uniquement les analyseurs ClamAV (`clamdscan` et `clamscan`). L'analyse antivirus est désactivée après l'installation jusqu'à ce qu'un administrateur valide correctement la commande configurée.</fr>
+      <pt>O SecureScan protege os uploads de documentos do GLPI verificando os arquivos com um antivírus configurável instalado no servidor antes que o GLPI os armazene permanentemente. O plugin intercepta a criação e a substituição de documentos, envia o arquivo temporário ao comando do ClamAV configurado, rejeita arquivos infectados ou verificações com falha e registra o resultado no log de arquivos do GLPI e no histórico do documento. Atualmente, o SecureScan é compatível apenas com os scanners do ClamAV (`clamdscan` e `clamscan`). A verificação antivírus fica desativada após a instalação até que um administrador valide corretamente o comando configurado.</pt>
     </long>
   </description>
   <homepage>https://github.com/monta990/securescan</homepage>
@@ -28,9 +28,9 @@
   <versions>
     <version>
       <num>1.0.0</num>
-      <compatibility>~12.0.0</compatibility>
-      <compatibility>~11.0.0</compatibility>
-      <download_url>https://github.com/monta990/securescan/releases/download/1.0.0/securescan-1.0.0.zip</download_url>
+      <compatibility>~12.0</compatibility>
+      <compatibility>~11.0.7</compatibility>
+      <download_url>https://github.com/monta990/securescan/releases/download/v1.0.0/securescan-1.0.0.zip</download_url>
     </version>
   </versions>
   <langs>

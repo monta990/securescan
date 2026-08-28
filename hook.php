@@ -28,6 +28,9 @@ function plugin_securescan_install(): bool
         'securescan_enabled' => 0,
         'securescan_command' => 'clamdscan --no-summary {file}',
         'securescan_tested_hash' => '',
+        'securescan_timeout' => 30,
+        'securescan_allowed_executables' => 'clamdscan',
+        'securescan_auto_update_check' => 0,
     ];
 
     $values = [];
@@ -73,6 +76,15 @@ function plugin_securescan_uninstall(): bool
     $config->deleteByCriteria([
         'context' => 'plugin:securescan',
     ]);
+
+    $cacheDirectory = rtrim(GLPI_PLUGIN_DOC_DIR, '/\\') . '/securescan';
+    $cacheFile = $cacheDirectory . '/github-version.json';
+    if (is_file($cacheFile)) {
+        @unlink($cacheFile);
+    }
+    if (is_dir($cacheDirectory)) {
+        @rmdir($cacheDirectory);
+    }
 
     return true;
 }

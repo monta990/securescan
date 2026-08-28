@@ -119,7 +119,7 @@ final class Audit
     {
         $json = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($json !== false) {
-            \Toolbox::logInFile('securescan', $json . PHP_EOL);
+            \Toolbox::logInFile('securescan', $json . PHP_EOL, true);
         }
     }
 }

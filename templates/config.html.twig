@@ -15,7 +15,7 @@
         </div>
     </div>
     <div class="px-3 pb-3 pt-0">
-        {% if version_status.latest_version %}
+        {% if version_status and version_status.latest_version %}
             {% if version_status.update_available %}
                 <div class="alert alert-warning d-flex align-items-center mb-0 py-2" role="status">
                     <i class="ti ti-download me-2" aria-hidden="true"></i>
@@ -33,9 +33,14 @@
                     · <a href="{{ version_status.release_url|e }}" target="_blank" rel="noopener noreferrer">{{ __('View releases', 'securescan') }}</a>
                 </div>
             {% endif %}
-        {% else %}
+        {% elseif version_status %}
             <div class="text-muted small">
                 {{ __('GitHub version check is currently unavailable.', 'securescan') }}
+                · <a href="https://github.com/monta990/securescan/releases" target="_blank" rel="noopener noreferrer">{{ __('View releases', 'securescan') }}</a>
+            </div>
+        {% else %}
+            <div class="text-muted small">
+                {{ __('Automatic version checks are disabled.', 'securescan') }}
                 · <a href="https://github.com/monta990/securescan/releases" target="_blank" rel="noopener noreferrer">{{ __('View releases', 'securescan') }}</a>
             </div>
         {% endif %}
@@ -52,9 +57,21 @@
                 <label class="form-label" for="securescan-command">{{ __('Scan command', 'securescan') }}</label>
                 <input type="text" class="form-control" id="securescan-command" name="securescan_command" value="{{ current_config['securescan_command']|e }}" autocomplete="off">
                 <div class="form-hint">{{ __('Use {file} as the temporary file placeholder. Default: clamdscan --no-summary {file}.', 'securescan') }}</div>
-                <div class="form-hint text-muted mt-1">{{ __('For security, separators, redirects, substitutions, comments, and shell operators are not allowed.', 'securescan') }}</div>
+                <div class="form-hint text-muted mt-1">{{ __('The command is executed without a shell. Shell separators, redirects, substitutions, comments, and operators are not interpreted.', 'securescan') }}</div>
                 <div class="form-hint text-muted mt-1">{{ __('Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged.', 'securescan') }}</div>
                 <div class="form-hint mt-1"><i class="ti ti-file-text me-1" aria-hidden="true"></i><a href="{{ path('/front/logs.php') }}">{{ __('Go to logs', 'securescan') }}</a></div>
+                <div class="form-hint text-muted mt-2">
+                    <i class="ti ti-shield-check me-1" aria-hidden="true"></i>{{ __('SecureScan currently supports ClamAV only. The executable is validated automatically and must be clamdscan or clamscan.', 'securescan') }}
+                </div>
+                <div class="mt-3">
+                    <label class="form-label" for="securescan-timeout">{{ __('Antivirus timeout (seconds)', 'securescan') }}</label>
+                    <input type="number" class="form-control" id="securescan-timeout" name="securescan_timeout" value="{{ current_config['securescan_timeout']|default(30) }}" min="5" max="300" step="1" inputmode="numeric">
+                    <div class="form-hint">{{ __('Default: 30 seconds. Allowed range: 5 to 300 seconds. A timeout rejects the file.', 'securescan') }}</div>
+                </div>
+                <div class="mt-3">
+                    {{ fields.dropdownYesNo('securescan_auto_update_check', current_config['securescan_auto_update_check']|default(0), __('Automatically check for new SecureScan versions', 'securescan')) }}
+                    <div class="form-hint">{{ __('When enabled, SecureScan checks GitHub for stable releases. Checks are cached and do not run on every page load.', 'securescan') }}</div>
+                </div>
             </div>
         </div>
         <div class="card-footer d-flex flex-wrap gap-2">
