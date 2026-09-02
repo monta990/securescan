@@ -22,6 +22,7 @@ final class VersionChecker
     private const REPOSITORY = 'monta990/securescan';
     private const API_URL = 'https://api.github.com/repos/monta990/securescan/releases?per_page=20';
     private const RELEASES_URL = 'https://github.com/monta990/securescan/releases';
+    private const CACHE_VERSION = 2;
     private const CACHE_TTL = 21600;
     private const FAILURE_CACHE_TTL = 1800;
     private const MAX_RESPONSE_BYTES = 65536;
@@ -39,13 +40,19 @@ final class VersionChecker
                 if (($cache['status'] ?? 'success') === 'failure') {
                     return [
                         'installed_version' => $installed,
-                        'latest_version' => $cache['latest_version'],
+                        'latest_version' => null,
                         'update_available' => false,
                         'release_url' => self::RELEASES_URL,
                         'status' => 'unavailable',
                     ];
                 }
-                return self::buildResult($installed, $cache['latest_version'], $cache['release_url'], 'cached');
+
+                return self::buildResult(
+                    $installed,
+                    $cache['latest_version'],
+                    $cache['release_url'],
+                    'cached'
+                );
             }
         }
 
@@ -66,7 +73,7 @@ final class VersionChecker
             return self::buildResult($installed, $cache['latest_version'], $cache['release_url'], 'stale');
         }
 
-        self::writeCache($installed, self::RELEASES_URL, 'failure');
+        self::writeCache(null, self::RELEASES_URL, 'failure');
 
         return [
             'installed_version' => $installed,
@@ -79,7 +86,7 @@ final class VersionChecker
 
     private static function fetchLatestStableRelease(): ?array
     {
-        if (!extension_loaded('curl')) {
+        if (!extension_loaded('curl') || !function_exists('curl_init') || !function_exists('curl_setopt')) {
             return null;
         }
 
@@ -91,28 +98,12 @@ final class VersionChecker
         $body = '';
         $tooLarge = false;
 
-        $protocolOptions = [];
-        $curlVersion = curl_version();
-        $curlVersionNumber = isset($curlVersion['version_number']) ? (int) $curlVersion['version_number'] : 0;
-
-        // CURLOPT_*_STR is supported by libcurl 7.85.0+. Use it only when the
-        // installed libcurl is new enough and both constants are available.
-        if (
-            $curlVersionNumber >= 0x075500
-            && defined('CURLOPT_PROTOCOLS_STR')
-            && defined('CURLOPT_REDIR_PROTOCOLS_STR')
-        ) {
-            $protocolOptions[CURLOPT_PROTOCOLS_STR] = 'https';
-            $protocolOptions[CURLOPT_REDIR_PROTOCOLS_STR] = 'https';
-        } else {
-            // Keep the legacy options as a compatibility fallback. They are
-            // still valid on older libcurl versions and enforce HTTPS-only
-            // requests with redirects disabled below.
-            $protocolOptions[CURLOPT_PROTOCOLS] = CURLPROTO_HTTPS;
-            $protocolOptions[CURLOPT_REDIR_PROTOCOLS] = CURLPROTO_HTTPS;
-        }
-
-        curl_setopt_array($ch, array_merge([
+        // The API endpoint is a fixed HTTPS URL. Redirects are disabled, so
+        // CURLOPT_PROTOCOLS / CURLOPT_*_STR are not required. Avoiding those
+        // option families keeps the checker compatible with PHP/libcurl builds
+        // where one of the constants is defined but the linked libcurl does not
+        // accept the corresponding option.
+        $options = [
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_SSL_VERIFYPEER => true,
@@ -139,7 +130,15 @@ final class VersionChecker
                 $body .= $chunk;
                 return strlen($chunk);
             },
-        ], $protocolOptions));
+        ];
+
+        foreach ($options as $option => $value) {
+            if (!curl_setopt($ch, $option, $value)) {
+                $error = curl_error($ch);
+                curl_close($ch);
+                throw new \RuntimeException($error !== '' ? $error : 'Unable to configure the GitHub connection.');
+            }
+        }
 
         $success = curl_exec($ch);
         $httpCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
@@ -147,6 +146,9 @@ final class VersionChecker
         curl_close($ch);
 
         if ($tooLarge || $httpCode !== 200 || $body === '') {
+            if ($success === false && $error !== '') {
+                throw new \RuntimeException($error);
+            }
             return null;
         }
 
@@ -194,17 +196,19 @@ final class VersionChecker
 
     private static function normalizeVersion(string $tag): ?string
     {
-        if (preg_match('/^v?(\d+\.\d+\.\d+)$/', $tag, $matches) !== 1) {
+        if (preg_match('/^(\d+\.\d+\.\d+)$/', $tag, $matches) !== 1) {
             return null;
         }
+
         return $matches[1];
     }
 
     private static function safeReleaseUrl(string $url): string
     {
-        if (preg_match('#^https://github\.com/' . preg_quote(self::REPOSITORY, '#') . '/releases/tag/v?\d+\.\d+\.\d+$#', $url) === 1) {
+        if (preg_match('#^https://github\.com/' . preg_quote(self::REPOSITORY, '#') . '/releases/tag/\d+\.\d+\.\d+$#', $url) === 1) {
             return $url;
         }
+
         return self::RELEASES_URL;
     }
 
@@ -244,7 +248,7 @@ final class VersionChecker
             return null;
         }
 
-        if (!is_array($cache)) {
+        if (!is_array($cache) || ($cache['cache_version'] ?? null) !== self::CACHE_VERSION) {
             return null;
         }
 
@@ -261,7 +265,11 @@ final class VersionChecker
             $status = 'success';
         }
 
-        if ($version === null || !is_int($checkedAt) || $checkedAt <= 0) {
+        if (!is_int($checkedAt) || $checkedAt <= 0) {
+            return null;
+        }
+
+        if ($status === 'success' && $version === null) {
             return null;
         }
 
@@ -273,7 +281,7 @@ final class VersionChecker
         ];
     }
 
-    private static function writeCache(string $latestVersion, string $releaseUrl, string $status = 'success'): void
+    private static function writeCache(?string $latestVersion, string $releaseUrl, string $status = 'success'): void
     {
         $path = self::cachePath();
         $dir = dirname($path);
@@ -283,6 +291,7 @@ final class VersionChecker
         }
 
         $payload = json_encode([
+            'cache_version' => self::CACHE_VERSION,
             'checked_at' => time(),
             'latest_version' => $latestVersion,
             'release_url' => self::safeReleaseUrl($releaseUrl),
