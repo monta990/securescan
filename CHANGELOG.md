@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## 1.0.1 - 2026-09-02
+
+### Security
+
+- Closed the remaining Marketplace security finding for absolute antivirus paths by resolving executable paths with `realpath()` and requiring the resolved executable to remain inside SecureScan's fixed system directories. Symlink escapes are rejected.
+- Changed the remaining static security rejection message to GLPI's safe translation helper.
+
+### Version checker
+
+- Fixed GitHub release checks on PHP/libcurl builds where protocol-related cURL options are rejected even when the corresponding constants are exposed. The checker now uses broadly supported cURL options, keeps redirects disabled, and verifies TLS without relying on protocol-option constants.
+- Invalidated pre-1.0.1 version-check cache entries so a previous failed check cannot mask a working checker after upgrade.
+- Failed GitHub release checks are not reported as SecureScan being up to date.
+- Release tags and release URLs use the project's version format without a `v` prefix.
+
+### Configuration
+
+- Removed the obsolete `securescan_allowed_executables` setting and all internal plumbing for it. SecureScan remains explicitly restricted to the supported ClamAV scanners (`clamdscan` and `clamscan`).
+- Updated the Marketplace descriptor to identify **Edwin Elias Alvarez** as the author and to use the `1.0.1` release URL without a `v` prefix.
+
 ## 1.0.0 - 2026-08-28
 
 ### Added
@@ -30,4 +49,3 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Limits scanner output and enforces a configurable execution deadline.
 - Uses GLPI's native configuration storage (`glpi_configs`) without a plugin-specific configuration table.
 - Protects audit evidence from accidental loss when GLPI file logging is disabled.
-
