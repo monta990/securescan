@@ -78,7 +78,7 @@ final class Antivirus
         if ($upload['path'] === null) {
             self::rejectUpload(
                 $item,
-                __('SecureScan could not locate the temporary uploaded file.', 'securescan'),
+                __s('SecureScan could not locate the temporary uploaded file.', 'securescan'),
                 null
             );
             return;
@@ -88,8 +88,7 @@ final class Antivirus
             $upload['path'],
             (string) $config['securescan_command'],
             false,
-            (int) ($config['securescan_timeout'] ?? 30),
-            (string) ($config['securescan_allowed_executables'] ?? 'clamdscan')
+            (int) ($config['securescan_timeout'] ?? 30)
         );
 
         Audit::record('document', $result, $upload['path'], $item);
@@ -146,7 +145,7 @@ final class Antivirus
         );
     }
 
-    public static function test(string $command, int $timeout = 30, string $allowedExecutables = 'clamdscan'): array
+    public static function test(string $command, int $timeout = 30): array
     {
         $tmp = tempnam(sys_get_temp_dir(), 'securescan_');
 
@@ -165,7 +164,7 @@ final class Antivirus
                 ];
             }
 
-            $result = self::scan($tmp, $command, true, $timeout, $allowedExecutables);
+            $result = self::scan($tmp, $command, true, $timeout);
             Audit::record('test', $result, $tmp);
             return $result;
         } finally {
@@ -232,7 +231,7 @@ final class Antivirus
     /**
      * @return array{ok: bool, message: string, status?: string, output?: string, exit_code?: int}
      */
-    private static function scan(string $file, string $template, bool $test = false, int $timeout = 30, string $allowedExecutables = 'clamdscan'): array
+    private static function scan(string $file, string $template, bool $test = false, int $timeout = 30): array
     {
         if (!is_file($file) || !is_readable($file)) {
             return [
@@ -255,7 +254,7 @@ final class Antivirus
             ];
         }
 
-        $argv = self::buildCommandArgv($template, $file, $allowedExecutables);
+        $argv = self::buildCommandArgv($template, $file);
         if ($argv === null) {
             return [
                 'ok'      => false,
@@ -417,7 +416,7 @@ final class Antivirus
      * No shell is used; the executable is resolved only from fixed system
      * directories when a basename is configured.
      */
-    private static function buildCommandArgv(string $template, string $file, string $allowedExecutables): ?array
+    private static function buildCommandArgv(string $template, string $file): ?array
     {
         $tokens = self::tokenizeCommand($template);
         if ($tokens === null || $tokens === [] || count(array_keys($tokens, '{file}', true)) !== 1) {
@@ -449,14 +448,14 @@ final class Antivirus
         return $tokens;
     }
 
-    public static function getTestedConfigurationHash(string $command, string $allowedExecutables): string
+    public static function getTestedConfigurationHash(string $command): string
     {
-        return hash('sha256', $command . "\0" . $allowedExecutables);
+        return hash('sha256', $command);
     }
 
-    public static function validateCommand(string $command, string $allowedExecutables): ?string
+    public static function validateCommand(string $command): ?string
     {
-        if (self::buildCommandArgv($command, '/dev/null', $allowedExecutables) === null) {
+        if (self::buildCommandArgv($command, '/dev/null') === null) {
             return __s('The antivirus command is invalid or the executable is not a supported ClamAV scanner.', 'securescan');
         }
         return null;
@@ -464,9 +463,26 @@ final class Antivirus
 
     private static function isExecutableAllowed(string $executable, array $allowlist): bool
     {
-        if (preg_match('/^(?:[A-Za-z]:[\\/]|\/)/', $executable) === 1) {
-            return in_array(basename($executable), $allowlist, true);
+        if (preg_match('/^(?:[A-Za-z]:[\\/]|\\/)/', $executable) === 1) {
+            $resolved = realpath($executable);
+            if ($resolved === false || !is_file($resolved) || !is_executable($resolved)) {
+                return false;
+            }
+
+            if (!in_array(basename($resolved), $allowlist, true)) {
+                return false;
+            }
+
+            foreach (self::getExecutableDirectories() as $directory) {
+                $allowedDirectory = realpath($directory);
+                if ($allowedDirectory !== false && rtrim(dirname($resolved), '/\\') === rtrim($allowedDirectory, '/\\')) {
+                    return true;
+                }
+            }
+
+            return false;
         }
+
         return in_array($executable, $allowlist, true);
     }
 
@@ -540,27 +556,60 @@ final class Antivirus
      */
     private static function resolveExecutablePath(string $executable): ?string
     {
+        $directories = self::getExecutableDirectories();
+
         if (preg_match('~^(?:[A-Za-z]:[\\/]|/)~', $executable) === 1) {
-            return is_file($executable) && is_executable($executable) ? $executable : null;
+            $resolved = realpath($executable);
+            if ($resolved === false || !is_file($resolved) || !is_executable($resolved)) {
+                return null;
+            }
+
+            $resolvedDirectory = rtrim(dirname($resolved), '/\\');
+            foreach ($directories as $directory) {
+                $allowedDirectory = realpath($directory);
+                if ($allowedDirectory !== false && $resolvedDirectory === rtrim($allowedDirectory, '/\\')) {
+                    return $resolved;
+                }
+            }
+
+            return null;
         }
 
         if (preg_match('/^[A-Za-z0-9._-]+$/', $executable) !== 1) {
             return null;
         }
 
+        foreach ($directories as $directory) {
+            $candidate = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $executable;
+            $resolved = realpath($candidate);
+            $allowedDirectory = realpath($directory);
+            if (
+                $resolved !== false
+                && is_file($resolved)
+                && is_executable($resolved)
+                && $allowedDirectory !== false
+                && rtrim(dirname($resolved), '/\\') === rtrim($allowedDirectory, '/\\')
+            ) {
+                return $resolved;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Fixed directories from which ClamAV executables may be resolved.
+     * PHP_BINDIR is included because packaged PHP installations may keep
+     * administrator-approved scanner helpers alongside the PHP binary.
+     */
+    private static function getExecutableDirectories(): array
+    {
         $directories = ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin', '/sbin'];
         if (defined('PHP_BINDIR')) {
             $directories[] = PHP_BINDIR;
         }
 
-        foreach (array_unique($directories) as $directory) {
-            $candidate = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $executable;
-            if (is_file($candidate) && is_executable($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
+        return array_unique($directories);
     }
 
 }

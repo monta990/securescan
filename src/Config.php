@@ -41,6 +41,11 @@ final class Config extends \Config
         return __('SecureScan', 'securescan');
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-shield-check';
+    }
+
     public static function getConfig(): array
     {
         $config = \Config::getConfigurationValues(self::CONTEXT);
@@ -50,19 +55,17 @@ final class Config extends \Config
             'securescan_command'     => self::DEFAULT_COMMAND,
             'securescan_tested_hash' => '',
             'securescan_timeout' => 30,
-            'securescan_allowed_executables' => 'clamdscan',
             'securescan_auto_update_check' => 0,
         ], $config);
     }
 
-    public static function save(int $enabled, string $command, string $testedHash, int $timeout = 30, string $allowedExecutables = 'clamdscan', int $autoUpdateCheck = 0): void
+    public static function save(int $enabled, string $command, string $testedHash, int $timeout = 30, int $autoUpdateCheck = 0): void
     {
         \Config::setConfigurationValues(self::CONTEXT, [
             'securescan_enabled'     => $enabled,
             'securescan_command'     => $command,
             'securescan_tested_hash' => $testedHash,
             'securescan_timeout' => $timeout,
-            'securescan_allowed_executables' => $allowedExecutables,
             'securescan_auto_update_check' => $autoUpdateCheck,
         ]);
     }

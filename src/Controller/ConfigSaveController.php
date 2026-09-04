@@ -27,10 +27,7 @@ final class ConfigSaveController extends AbstractController
         $command = trim($request->request->getString('securescan_command'));
         $enabled = $request->request->getInt('securescan_enabled', 0) === 1 ? 1 : 0;
         $timeout = max(5, min(300, $request->request->getInt('securescan_timeout', 30)));
-        // ClamAV scanner selection is fixed internally; the normal UI does not expose an executable list.
-        // Keep the stored value for backward compatibility with previous SecureScan versions.
         $storedConfig = SecureScanConfig::getConfig();
-        $allowedExecutables = trim((string) ($storedConfig['securescan_allowed_executables'] ?? 'clamdscan'));
         $autoUpdateCheck = $request->request->getInt('securescan_auto_update_check', 0) === 1 ? 1 : 0;
 
         if ($command === '') {
@@ -43,7 +40,7 @@ final class ConfigSaveController extends AbstractController
             return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
         }
 
-        $validationError = SecureScan::validateCommand($command, $allowedExecutables);
+        $validationError = SecureScan::validateCommand($command);
         if ($validationError !== null) {
             \Session::addMessageAfterRedirect($validationError, false, ERROR);
             return new RedirectResponse(SecureScanConfig::getConfigurationUrl());
@@ -51,7 +48,7 @@ final class ConfigSaveController extends AbstractController
 
         $current = $storedConfig;
         $testedHash = (string) ($current['securescan_tested_hash'] ?? '');
-        $commandHash = SecureScan::getTestedConfigurationHash($command, $allowedExecutables);
+        $commandHash = SecureScan::getTestedConfigurationHash($command);
 
         if ($command !== (string) ($current['securescan_command'] ?? '')) {
             $testedHash = '';
@@ -68,13 +65,12 @@ final class ConfigSaveController extends AbstractController
         }
 
         try {
-            SecureScanConfig::save($enabled, $command, $testedHash, $timeout, $allowedExecutables, $autoUpdateCheck);
+            SecureScanConfig::save($enabled, $command, $testedHash, $timeout, $autoUpdateCheck);
             $savedConfig = SecureScanConfig::getConfig();
             $saved = (int) ($savedConfig['securescan_enabled'] ?? -1) === $enabled
                 && (string) ($savedConfig['securescan_command'] ?? '') === $command
                 && (string) ($savedConfig['securescan_tested_hash'] ?? '') === $testedHash
                 && (int) ($savedConfig['securescan_timeout'] ?? 0) === $timeout
-                && (string) ($savedConfig['securescan_allowed_executables'] ?? '') === $allowedExecutables
                 && (int) ($savedConfig['securescan_auto_update_check'] ?? 0) === $autoUpdateCheck;
         } catch (\Throwable $e) {
             \Toolbox::logDebug($e);

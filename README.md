@@ -502,7 +502,7 @@ The current plugin metadata declares:
 - **GLPI 11.x (11.0.7+)**
 - **GLPI 12.x**
 - **PHP ≥ 8.2**
-- **SecureScan 1.0.0**
+- **SecureScan 0.1.24**
 
 Compatibility is maintained against the GLPI APIs and plugin architecture targeted by the current release.
 

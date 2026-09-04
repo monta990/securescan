@@ -29,7 +29,6 @@ function plugin_securescan_install(): bool
         'securescan_command' => 'clamdscan --no-summary {file}',
         'securescan_tested_hash' => '',
         'securescan_timeout' => 30,
-        'securescan_allowed_executables' => 'clamdscan',
         'securescan_auto_update_check' => 0,
     ];
 
