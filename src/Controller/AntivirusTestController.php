@@ -30,26 +30,21 @@ final class AntivirusTestController extends AbstractController
             $command = (string) $config['securescan_command'];
         }
         $timeout = max(5, min(300, $request->request->getInt('securescan_timeout', (int) ($config['securescan_timeout'] ?? 30))));
-        // ClamAV scanner selection is an internal security control, not a normal UI setting.
-        $allowedExecutables = trim((string) ($config['securescan_allowed_executables'] ?? 'clamdscan'));
-
-        $result = Antivirus::test($command, $timeout, $allowedExecutables);
+        $result = Antivirus::test($command, $timeout);
 
         if ($result['ok']) {
             try {
                 SecureScanConfig::save(
                     (int) ($config['securescan_enabled'] ?? 0),
                     $command,
-                    Antivirus::getTestedConfigurationHash($command, $allowedExecutables),
+                    Antivirus::getTestedConfigurationHash($command),
                     $timeout,
-                    $allowedExecutables,
                     (int) ($config['securescan_auto_update_check'] ?? 0)
                 );
                 $savedConfig = SecureScanConfig::getConfig();
                 $stored = (string) ($savedConfig['securescan_command'] ?? '') === $command
-                    && (string) ($savedConfig['securescan_tested_hash'] ?? '') === Antivirus::getTestedConfigurationHash($command, $allowedExecutables)
+                    && (string) ($savedConfig['securescan_tested_hash'] ?? '') === Antivirus::getTestedConfigurationHash($command)
                     && (int) ($savedConfig['securescan_timeout'] ?? 0) === $timeout
-                    && (string) ($savedConfig['securescan_allowed_executables'] ?? '') === $allowedExecutables
                     && (int) ($savedConfig['securescan_auto_update_check'] ?? 0) === (int) ($config['securescan_auto_update_check'] ?? 0);
             } catch (\Throwable $e) {
                 \Toolbox::logDebug($e);
