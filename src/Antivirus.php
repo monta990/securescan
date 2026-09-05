@@ -32,7 +32,7 @@ final class Antivirus
      * entry containing the definitive Document ID without weakening the
      * pre-storage security check.
      *
-     * @var array<int, array{status: string, sha256: ?string, size: ?int}>
+     * @var array<int, array{status: string, scan_verdict: string, scan_evidence: string, exit_code: ?int, sha256: ?string, size: ?int}>
      */
     private static ?\WeakMap $pendingScans = null;
 
@@ -95,9 +95,12 @@ final class Antivirus
 
         if ($result['ok']) {
             self::getPendingScans()[$item] = [
-                'status' => (string) ($result['status'] ?? 'clean'),
-                'sha256' => is_file($upload['path']) ? hash_file('sha256', $upload['path']) : null,
-                'size'   => is_file($upload['path']) ? filesize($upload['path']) : null,
+                'status'        => (string) ($result['status'] ?? 'clean'),
+                'scan_verdict'  => (string) ($result['scan_verdict'] ?? 'clean'),
+                'scan_evidence' => (string) ($result['scan_evidence'] ?? 'unknown'),
+                'exit_code'     => isset($result['exit_code']) ? (int) $result['exit_code'] : null,
+                'sha256'        => is_file($upload['path']) ? hash_file('sha256', $upload['path']) : null,
+                'size'          => is_file($upload['path']) ? filesize($upload['path']) : null,
             ];
         }
 
@@ -139,6 +142,9 @@ final class Antivirus
         Audit::recordStored(
             'document_stored',
             $pending['status'],
+            $pending['scan_verdict'],
+            $pending['scan_evidence'],
+            $pending['exit_code'],
             $pending['size'],
             $pending['sha256'],
             $item
@@ -376,38 +382,150 @@ final class Antivirus
             ];
         }
 
-        // ClamAV convention: 0 = clean, 1 = infected, 2+ = scan error.
+        // ClamAV convention: 0 = no threat reported, 1 = infected, 2+ = scan error.
+        // Exit code 0 is not sufficient evidence of a completed scan: ClamAV may
+        // skip a file because of size/recursion limits while still returning 0.
+        $evidence = self::analyzeScanOutput($output, $file, $exitCode);
+
         if ($exitCode === 0) {
+            if ($evidence['verdict'] === 'clean') {
+                return [
+                    'ok'            => true,
+                    'message'       => $test
+                        ? __s('The antivirus responded successfully and the test file is clean.', 'securescan')
+                        : '',
+                    'status'        => 'clean',
+                    'scan_verdict'  => 'clean',
+                    'scan_evidence' => $evidence['evidence'],
+                    'output'        => $output,
+                    'exit_code'     => $exitCode,
+                ];
+            }
+
             return [
-                'ok'      => true,
-                'message' => $test
-                    ? __s('The antivirus responded successfully and the test file is clean.', 'securescan')
-                    : '',
-                'status'  => 'clean',
-                'output'  => $output,
-                'exit_code' => $exitCode,
+                'ok'            => false,
+                'message'       => __s('SecureScan could not confirm that the antivirus scanned the file. The file was rejected.', 'securescan'),
+                'status'        => 'error',
+                'scan_verdict'  => $evidence['verdict'],
+                'scan_evidence' => $evidence['evidence'],
+                'output'        => $output,
+                'exit_code'     => $exitCode,
             ];
         }
 
         if ($exitCode === 1) {
             return [
-                'ok'      => false,
-                'message' => __s('The antivirus detected a threat. The file was rejected.', 'securescan'),
-                'status'  => 'infected',
-                'output'  => $output,
-                'exit_code' => $exitCode,
+                'ok'            => false,
+                'message'       => __s('The antivirus detected a threat. The file was rejected.', 'securescan'),
+                'status'        => 'infected',
+                'scan_verdict'  => 'infected',
+                'scan_evidence' => $evidence['evidence'],
+                'output'        => $output,
+                'exit_code'     => $exitCode,
             ];
         }
 
         return [
-            'ok'      => false,
-            'message' => sprintf(
+            'ok'            => false,
+            'message'       => sprintf(
                 __s('SecureScan could not complete the antivirus scan (code %d). The file was rejected.', 'securescan'),
                 $exitCode
             ),
-            'status'  => 'error',
-            'output'  => $output,
-            'exit_code' => $exitCode,
+            'status'        => 'error',
+            'scan_verdict'  => 'error',
+            'scan_evidence' => $evidence['evidence'],
+            'output'        => $output,
+            'exit_code'     => $exitCode,
+        ];
+    }
+
+    /**
+     * Derive a positive, target-specific scan verdict from ClamAV output.
+     *
+     * Exit code 0 is accepted only when ClamAV explicitly reports the uploaded
+     * file as OK. Skip/limit/error indicators take precedence and an ambiguous
+     * response fails closed. The raw scanner output remains bounded in scan().
+     *
+     * @return array{verdict: string, evidence: string}
+     */
+    private static function analyzeScanOutput(string $output, string $file, int $exitCode): array
+    {
+        $lines = preg_split('/\R/', $output) ?: [];
+        $target = rtrim($file);
+        $targetBase = basename($file);
+
+        $skipPatterns = [
+            'size_limit_reached' => '/(?:size limit reached|max(?:imum)?[ -]?(?:file|scan) size|maxfilesize|maxscansize|scan limit)/i',
+            'cannot_open' => '/(?:can\'t|cannot|unable to)\s+(?:open|access|read|scan)\b/i',
+            'excluded' => '/\b(?:excluded|skipped|not scanned)\b/i',
+            'symbolic_link' => '/\bsymbolic link\b/i',
+        ];
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            foreach ($skipPatterns as $evidence => $pattern) {
+                if (preg_match($pattern, $line) === 1) {
+                    return [
+                        'verdict'  => 'not_scanned',
+                        'evidence' => $evidence,
+                    ];
+                }
+            }
+        }
+
+        $targetOk = false;
+        $targetFound = false;
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            if (preg_match('/^(.*?)\s*:\s*OK$/i', $line, $matches) === 1) {
+                $reportedTarget = trim($matches[1], " \t\"'");
+                if ($reportedTarget === $target || basename($reportedTarget) === $targetBase) {
+                    $targetOk = true;
+                    continue;
+                }
+            }
+
+            if (preg_match('/^(.*?)\s*:\s*.*\bFOUND$/i', $line, $matches) === 1) {
+                $reportedTarget = trim($matches[1], " \t\"'");
+                if ($reportedTarget === $target || basename($reportedTarget) === $targetBase) {
+                    $targetFound = true;
+                }
+            }
+        }
+
+        if ($exitCode === 1) {
+            return [
+                'verdict'  => 'infected',
+                'evidence' => $targetFound ? 'target_found' : 'exit_code_infected',
+            ];
+        }
+
+        if ($exitCode === 0 && $targetFound) {
+            return [
+                'verdict'  => 'unknown',
+                'evidence' => 'contradictory_output',
+            ];
+        }
+
+        if ($exitCode === 0 && $targetOk) {
+            return [
+                'verdict'  => 'clean',
+                'evidence' => 'target_ok',
+            ];
+        }
+
+        return [
+            'verdict'  => 'unknown',
+            'evidence' => 'no_positive_scan_evidence',
         ];
     }
 

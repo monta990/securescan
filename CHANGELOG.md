@@ -3,6 +3,24 @@
 All notable changes to this project are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 1.0.2 - 2026-09-04
+
+### Security
+
+- Hardened the scan verdict so an antivirus exit code of `0` is not treated as clean unless ClamAV provides positive evidence that the target file was scanned and reported `OK`.
+- Added fail-closed handling for scan-limit, skipped, excluded, symbolic-link, access, and other ambiguous scanner responses.
+- Infected results continue to reject uploads, with explicit normalized evidence recorded in the audit trail.
+
+### Audit and logging
+
+- Expanded `files/_log/securescan.log` records with `scan_verdict` and `scan_evidence` fields so administrators can distinguish a confirmed clean scan from an omitted or ambiguous scan.
+- The `document_stored` audit event now preserves the original scan evidence and exit code instead of reconstructing a generic clean result.
+- Raw ClamAV output is still bounded and is not persisted; the audit log records normalized evidence only.
+
+### Documentation
+
+- Documented the new positive-scan verification and audit fields in the README.
+
 ## 1.0.1 - 2026-09-03
 
 ### Security

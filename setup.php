@@ -23,7 +23,7 @@ use GlpiPlugin\Securescan\Config as SecureScanConfig;
 
 use function Safe\define;
 
-define('PLUGIN_SECURESCAN_VERSION', '1.0.1');
+define('PLUGIN_SECURESCAN_VERSION', '1.0.2');
 define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.7');
 define('PLUGIN_SECURESCAN_MAX_GLPI_VERSION', '12.99.99');
 define('PLUGIN_SECURESCAN_MIN_PHP_VERSION', '8.2.0');

@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan 1.0.1\n"
+"Project-Id-Version: SecureScan 1.0.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-28 14:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -195,3 +195,6 @@ msgstr "SecureScan valida el ejecutable del antivirus automáticamente y solo pe
 
 msgid "SecureScan currently supports ClamAV only. The executable is validated automatically and must be clamdscan or clamscan."
 msgstr "SecureScan actualmente solo es compatible con ClamAV. El ejecutable se valida automáticamente y debe ser clamdscan o clamscan."
+
+msgid "SecureScan could not confirm that the antivirus scanned the file. The file was rejected."
+msgstr "SecureScan no pudo confirmar que el antivirus analizara el archivo. El archivo fue rechazado."
