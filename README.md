@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">SecureScan</h1>
 <p align="center">
-  <strong>GLPI plugin — Antivirus scanning for uploaded files before they are stored</strong>
+  <strong>GLPI plugin — ClamAV Antivirus scanning for uploaded files before they are stored</strong>
 </p>
 <p align="center">
   <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0.7%2B-blue" alt="GLPI 11 compatibility"></a>
