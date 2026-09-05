@@ -1,5 +1,5 @@
 <p align="center">
-  <p align="center"><img src="logo.png" alt="SecureScan"></p>
+  <p align="center"><img src="logo.png" alt="SecureScan" width="256" height="256">
 </p>
 <h1 align="center">SecureScan</h1>
 <p align="center">
