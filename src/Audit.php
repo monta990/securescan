@@ -18,8 +18,10 @@ final class Audit
         $record = [
             'time'       => date('c'),
             'type'       => $type,
-            'status'     => $result['status'] ?? ($result['ok'] ? 'clean' : 'error'),
-            'exit_code'  => $result['exit_code'] ?? null,
+            'status'        => $result['status'] ?? ($result['ok'] ? 'clean' : 'error'),
+            'scan_verdict'  => $result['scan_verdict'] ?? null,
+            'scan_evidence' => $result['scan_evidence'] ?? null,
+            'exit_code'     => $result['exit_code'] ?? null,
             'size'       => is_file($file) ? filesize($file) : null,
             'sha256'     => is_file($file) ? hash_file('sha256', $file) : null,
             'temporary'  => is_file($file) ? basename($file) : null,
@@ -39,6 +41,9 @@ final class Audit
     public static function recordStored(
         string $type,
         string $status,
+        string $scanVerdict,
+        string $scanEvidence,
+        ?int $exitCode,
         ?int $size,
         ?string $sha256,
         ?object $item = null
@@ -46,8 +51,10 @@ final class Audit
         $record = [
             'time'       => date('c'),
             'type'       => $type,
-            'status'     => $status,
-            'exit_code'  => 0,
+            'status'        => $status,
+            'scan_verdict'  => $scanVerdict,
+            'scan_evidence' => $scanEvidence,
+            'exit_code'     => $exitCode,
             'size'       => $size,
             'sha256'     => $sha256,
             'temporary'  => null,

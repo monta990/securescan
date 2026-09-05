@@ -17,7 +17,7 @@
 
 ## Overview
 
-**SecureScan** integrates an antivirus engine into GLPI's document upload workflow. Files are scanned **before they are published/stored as GLPI documents**. Clean files continue through the normal GLPI workflow; infected or failed scans are rejected.
+**SecureScan** integrates an ClamAV antivirus server engine into GLPI's document upload workflow. Files are scanned **before they are published/stored as GLPI documents**. Clean files continue through the normal GLPI workflow; infected or failed scans are rejected.
 
 The plugin is designed to keep the antivirus operation isolated from GLPI's core code and to use GLPI's native configuration, authorization, routing, CSRF protection, translations, and history mechanisms wherever applicable.
 
@@ -158,6 +158,8 @@ Example:
 clamdscan --no-summary {file}
 ```
 
+The configured scanner command must keep the per-file result in its output so SecureScan can positively verify a clean scan. The recommended `--no-summary` form does this. Do not use output-suppressing options such as `--quiet` when they prevent ClamAV from returning the target file result; SecureScan will reject an otherwise successful `exit code 0` when no positive `OK` evidence is available.
+
 ### Test antivirus
 
 The **Test antivirus** action creates a controlled temporary test file and executes the currently configured scanner command against it.
@@ -184,6 +186,47 @@ Configuration changes are saved through SecureScan's native GLPI/Symfony control
 
 ---
 
+## Scan verification and audit evidence
+
+Starting with SecureScan 1.0.2, an antivirus exit code of `0` is not accepted as proof of a clean file by itself. SecureScan requires positive output evidence for the exact temporary file and accepts the clean result only when ClamAV reports that target as `OK`.
+
+If ClamAV reports a scan limit, skipped/excluded file, symbolic-link condition, access/open failure, or another ambiguous response, SecureScan fails closed and rejects the upload. This prevents a file that was not actually scanned from being stored as clean.
+
+The detailed audit file is `files/_log/securescan.log`. SecureScan records normalized evidence rather than persisting raw ClamAV output. A successful scan can look like:
+
+```json
+{
+  "type": "document",
+  "status": "clean",
+  "scan_verdict": "clean",
+  "scan_evidence": "target_ok",
+  "exit_code": 0,
+  "size": 184320,
+  "sha256": "...",
+  "temporary": "glpi_abc123",
+  "itemtype": "Document",
+  "items_id": 0
+}
+```
+
+A file that ClamAV did not confirm as scanned is recorded explicitly and rejected, for example:
+
+```json
+{
+  "type": "document",
+  "status": "error",
+  "scan_verdict": "not_scanned",
+  "scan_evidence": "size_limit_reached",
+  "exit_code": 0,
+  "size": 2097152,
+  "sha256": "..."
+}
+```
+
+Common normalized evidence values include `target_ok`, `target_found`, `size_limit_reached`, `cannot_open`, `excluded`, `symbolic_link`, `exit_code_infected`, `contradictory_output`, `no_positive_scan_evidence`, and `timeout`.
+
+Raw scanner output is intentionally not written to the audit file. File contents are never logged.
+
 ## Antivirus test
 
 The built-in test is intentionally different from uploading a document.
@@ -196,6 +239,8 @@ A typical successful test produces an audit entry similar to:
 {
   "type": "test",
   "status": "clean",
+  "scan_verdict": "clean",
+  "scan_evidence": "target_ok",
   "exit_code": 0,
   "size": 26
 }

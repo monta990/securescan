@@ -6,10 +6,10 @@
   <logo>https://raw.githubusercontent.com/monta990/securescan/main/logo.png</logo>
   <description>
     <short>
-      <en>Analyze uploaded files with the server antivirus before storing them.</en>
-      <es>Analiza archivos cargados con el antivirus del servidor antes de almacenarlos.</es>
-      <fr>Analyse les fichiers chargés avec l'antivirus du serveur avant leur stockage.</fr>
-      <pt>Analise os arquivos enviados com o antivírus do servidor antes de armazená-los.</pt>
+      <en>Analyze uploaded files with the server antivirus (ClamAV) before storing them.</en>
+      <es>Analiza archivos cargados con el antivirus (ClamAV) del servidor antes de almacenarlos.</es>
+      <fr>Analyse les fichiers chargés avec l'antivirus (ClamAV) du serveur avant leur stockage.</fr>
+      <pt>Analise os arquivos enviados com o antivírus (ClamAV) do servidor antes de armazená-los.</pt>
     </short>
     <long>
       <en>SecureScan protects GLPI document uploads by scanning files with a configurable antivirus installed on the server before GLPI stores them permanently. The plugin intercepts document creation and replacement, sends the temporary file to the configured antivirus command, rejects infected files or failed scans, and records the result in the GLPI file log and document history. Antivirus scanning is disabled after installation until an administrator successfully validates the configured command.</en>
@@ -27,10 +27,10 @@
   </authors>
   <versions>
     <version>
-      <num>1.0.1</num>
+      <num>1.0.2</num>
       <compatibility>~12.0</compatibility>
       <compatibility>~11.0.7</compatibility>
-      <download_url>https://github.com/monta990/securescan/releases/download/1.0.1/securescan.zip</download_url>
+      <download_url>https://github.com/monta990/securescan/releases/download/1.0.2/securescan.zip</download_url>
     </version>
   </versions>
   <langs>
