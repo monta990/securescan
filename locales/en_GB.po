@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan 1.0.2\n"
+"Project-Id-Version: SecureScan 1.0.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 14:32+0000\n"
+"POT-Creation-Date: 2026-10-11 10:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en_GB\n"
@@ -192,3 +192,21 @@ msgstr "SecureScan currently supports ClamAV only. The executable is validated a
 
 msgid "SecureScan could not confirm that the antivirus scanned the file. The file was rejected."
 msgstr "SecureScan could not confirm that the antivirus scanned the file. The file was rejected."
+
+msgid "SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents."
+msgstr "SecureScan must be tested again after this plugin update. Run Test antivirus with the current command before uploading documents."
+
+msgid "The antivirus scanner produced too much output. The file was rejected."
+msgstr "The antivirus scanner produced too much output. The file was rejected."
+
+msgid "For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. Without this daemon setting, ClamAV may report a file skipped because of scan limits as OK. SecureScan automatically enables --alert-exceeds-max=yes when using clamscan."
+msgstr "For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. Without this daemon setting, ClamAV may report a file skipped because of scan limits as OK. SecureScan automatically enables --alert-exceeds-max=yes when using clamscan."
+
+msgid "SecureScan could not prepare the scan-limit validation file. The command was not approved."
+msgstr "SecureScan could not prepare the scan-limit validation file. The command was not approved."
+
+msgid "SecureScan could not verify ClamAV scan-limit alerts. For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. The command was not approved."
+msgstr "SecureScan could not verify ClamAV scan-limit alerts. For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. The command was not approved."
+
+msgid "The antivirus command passed the clean-file test and the scan-limit safety check."
+msgstr "The antivirus command passed the clean-file test and the scan-limit safety check."

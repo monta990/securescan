@@ -15,6 +15,12 @@
         </div>
     </div>
     <div class="px-3 pb-3 pt-0">
+        {% if needs_retest %}
+            <div class="alert alert-warning d-flex align-items-start mb-2" role="alert">
+                <i class="ti ti-alert-triangle me-2 mt-1" aria-hidden="true"></i>
+                <div>{{ __('SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents.', 'securescan') }}</div>
+            </div>
+        {% endif %}
         {% if version_status and version_status.latest_version %}
             {% if version_status.update_available %}
                 <div class="alert alert-warning d-flex align-items-center mb-0 py-2" role="status">
@@ -62,6 +68,9 @@
                 <div class="form-hint mt-1"><i class="ti ti-file-text me-1" aria-hidden="true"></i><a href="{{ path('/front/logs.php') }}">{{ __('Go to logs', 'securescan') }}</a></div>
                 <div class="form-hint text-muted mt-2">
                     <i class="ti ti-shield-check me-1" aria-hidden="true"></i>{{ __('SecureScan currently supports ClamAV only. The executable is validated automatically and must be clamdscan or clamscan.', 'securescan') }}
+                </div>
+                <div class="alert alert-warning mt-3 mb-0" role="note">
+                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>{{ __('For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. Without this daemon setting, ClamAV may report a file skipped because of scan limits as OK. SecureScan automatically enables --alert-exceeds-max=yes when using clamscan.', 'securescan') }}
                 </div>
                 <div class="mt-3">
                     <label class="form-label" for="securescan-timeout">{{ __('Antivirus timeout (seconds)', 'securescan') }}</label>

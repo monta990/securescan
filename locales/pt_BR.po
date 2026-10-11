@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: SecureScan 1.0.2\n"
+"Project-Id-Version: SecureScan 1.0.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 14:32+0000\n"
+"POT-Creation-Date: 2026-10-11 10:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_BR\n"
@@ -196,3 +196,21 @@ msgstr "Atualmente, o SecureScan oferece suporte apenas ao ClamAV. O executável
 
 msgid "SecureScan could not confirm that the antivirus scanned the file. The file was rejected."
 msgstr "O SecureScan não conseguiu confirmar que o antivírus analisou o arquivo. O arquivo foi rejeitado."
+
+msgid "SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents."
+msgstr "O SecureScan deve ser testado novamente após esta atualização. Execute Testar antivírus com o comando atual antes de enviar documentos."
+
+msgid "The antivirus scanner produced too much output. The file was rejected."
+msgstr "O antivírus produziu saída excessiva. O arquivo foi rejeitado."
+
+msgid "For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. Without this daemon setting, ClamAV may report a file skipped because of scan limits as OK. SecureScan automatically enables --alert-exceeds-max=yes when using clamscan."
+msgstr "Para clamdscan, defina AlertExceedsMax yes em clamd.conf e reinicie o clamd. Sem essa configuração do serviço, o ClamAV pode informar como OK um arquivo ignorado devido aos limites de análise. O SecureScan ativa automaticamente --alert-exceeds-max=yes ao usar clamscan."
+
+msgid "SecureScan could not prepare the scan-limit validation file. The command was not approved."
+msgstr "O SecureScan não conseguiu preparar o arquivo de validação dos limites de verificação. O comando não foi aprovado."
+
+msgid "SecureScan could not verify ClamAV scan-limit alerts. For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. The command was not approved."
+msgstr "O SecureScan não conseguiu verificar os alertas de limite do ClamAV. Com clamdscan, defina AlertExceedsMax yes em clamd.conf e reinicie o clamd. O comando não foi aprovado."
+
+msgid "The antivirus command passed the clean-file test and the scan-limit safety check."
+msgstr "O comando do antivírus passou no teste com arquivo limpo e na verificação de segurança dos limites de análise."

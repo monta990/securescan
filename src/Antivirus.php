@@ -84,9 +84,26 @@ final class Antivirus
             return;
         }
 
+        $command = (string) ($config['securescan_command'] ?? Config::DEFAULT_COMMAND);
+        $testedHash = (string) ($config['securescan_tested_hash'] ?? '');
+        if (!hash_equals(self::getTestedConfigurationHash($command), $testedHash)) {
+            $result = [
+                'ok'            => false,
+                'message'       => __s('SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents.', 'securescan'),
+                'status'        => 'error',
+                'scan_verdict'  => 'unknown',
+                'scan_evidence' => 'configuration_not_retested',
+                'exit_code'     => null,
+                'output'        => '',
+            ];
+            Audit::record('document', $result, $upload['path'], $item);
+            self::rejectUpload($item, $result['message'], $upload['path']);
+            return;
+        }
+
         $result = self::scan(
             $upload['path'],
-            (string) $config['securescan_command'],
+            $command,
             false,
             (int) ($config['securescan_timeout'] ?? 30)
         );
@@ -172,10 +189,118 @@ final class Antivirus
 
             $result = self::scan($tmp, $command, true, $timeout);
             Audit::record('test', $result, $tmp);
+            if (!$result['ok']) {
+                return $result;
+            }
+
+            // A clean-file test alone cannot distinguish a fully scanned file
+            // from one skipped because ClamAV reached MaxRecursion/scan limits.
+            // Verify this policy with a small, malware-free nested ZIP probe so
+            // clamdscan configurations without AlertExceedsMax cannot be enabled.
+            $limitProbe = self::createLimitProbeFile();
+            if ($limitProbe === null) {
+                return [
+                    'ok'            => false,
+                    'message'       => __s('SecureScan could not prepare the scan-limit validation file. The command was not approved.', 'securescan'),
+                    'status'        => 'error',
+                    'scan_verdict'  => 'error',
+                    'scan_evidence' => 'limit_probe_unavailable',
+                    'exit_code'     => null,
+                    'output'        => '',
+                ];
+            }
+
+            try {
+                $limitResult = self::scan($limitProbe, $command, true, $timeout);
+                $limitVerified = !$limitResult['ok']
+                    && ($limitResult['scan_verdict'] ?? '') === 'not_scanned'
+                    && ($limitResult['scan_evidence'] ?? '') === 'size_limit_reached'
+                    && ($limitResult['exit_code'] ?? null) === 1;
+
+                if (!$limitVerified) {
+                    Audit::record('test_limit_guard', $limitResult, $limitProbe);
+                    return [
+                        'ok'            => false,
+                        'message'       => __s('SecureScan could not verify ClamAV scan-limit alerts. For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. The command was not approved.', 'securescan'),
+                        'status'        => 'error',
+                        'scan_verdict'  => 'unknown',
+                        'scan_evidence' => 'limit_alert_not_confirmed',
+                        'exit_code'     => isset($limitResult['exit_code']) ? (int) $limitResult['exit_code'] : null,
+                        'output'        => (string) ($limitResult['output'] ?? ''),
+                    ];
+                }
+
+                Audit::record('test_limit_guard', [
+                    'ok'            => true,
+                    'status'        => 'verified',
+                    'scan_verdict'  => 'not_scanned',
+                    'scan_evidence' => 'size_limit_reached',
+                    'exit_code'     => 1,
+                ], $limitProbe);
+            } finally {
+                @unlink($limitProbe);
+            }
+
+            $result['message'] = __s('The antivirus command passed the clean-file test and the scan-limit safety check.', 'securescan');
+            $result['limit_guard_verified'] = true;
             return $result;
         } finally {
             @unlink($tmp);
         }
+    }
+
+    /**
+     * Build a tiny valid ZIP containing another ZIP at 102 nesting levels.
+     * ClamAV's supported recursion ceiling is 100, so a configured scanner
+     * must report Heuristics.Limits.Exceeded instead of clean OK. This probe
+     * contains only harmless text and is run only from the administrator test.
+     */
+    private static function createLimitProbeFile(): ?string
+    {
+        $content = "SecureScan scan-limit validation probe\n";
+        try {
+            for ($depth = 0; $depth < 102; $depth++) {
+                $content = self::createSingleFileZip('nested.zip', $content);
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'securescan_limits_');
+        if ($path === false) {
+            return null;
+        }
+        if (file_put_contents($path, $content, LOCK_EX) === false) {
+            @unlink($path);
+            return null;
+        }
+
+        return $path;
+    }
+
+    /** Create a single-entry, uncompressed ZIP archive without extra extensions. */
+    private static function createSingleFileZip(string $name, string $contents): string
+    {
+        $name = basename($name);
+        $nameLength = strlen($name);
+        $contentSize = strlen($contents);
+        $crc = crc32($contents);
+
+        // ZIP method 0 (stored) keeps the probe portable even if PHP zlib is absent.
+        $localHeader = "PK\x03\x04"
+            . pack('vvvvvVVVvv', 20, 0, 0, 0, 0, $crc, $contentSize, $contentSize, $nameLength, 0)
+            . $name
+            . $contents;
+
+        $centralOffset = strlen($localHeader);
+        $centralDirectory = "PK\x01\x02"
+            . pack('vvvvvvVVVvvvvvVV', 20, 20, 0, 0, 0, 0, $crc, $contentSize, $contentSize, $nameLength, 0, 0, 0, 0, 0, 0)
+            . $name;
+
+        $endRecord = "PK\x05\x06"
+            . pack('vvvvVVv', 0, 0, 1, 1, strlen($centralDirectory), $centralOffset, 0);
+
+        return $localHeader . $centralDirectory . $endRecord;
     }
 
     private static function rejectUpload($item, string $message, ?string $file): void
@@ -301,6 +426,7 @@ final class Antivirus
 
         $output = '';
         $timedOut = false;
+        $outputLimitReached = false;
         $startedAt = microtime(true);
         $maxOutputBytes = 65536;
 
@@ -318,7 +444,24 @@ final class Antivirus
                     if ($remaining > 0) {
                         $output .= substr($chunk, 0, $remaining);
                     }
+                    if (strlen($chunk) > $remaining) {
+                        $outputLimitReached = true;
+                    }
                 }
+            }
+
+            if ($outputLimitReached) {
+                if ($running) {
+                    @proc_terminate($process, 15);
+                    usleep(250000);
+                    $status = proc_get_status($process);
+                    if (($status['running'] ?? false) === true) {
+                        @proc_terminate($process, 9);
+                    }
+                }
+                $exitCode = 125;
+                proc_close($process);
+                break;
             }
 
             if (!$running) {
@@ -374,18 +517,34 @@ final class Antivirus
 
         if ($timedOut) {
             return [
-                'ok' => false,
-                'message' => sprintf(__s('The antivirus scan exceeded the configured timeout of %d seconds. The file was rejected.', 'securescan'), $timeout),
-                'status' => 'error',
-                'output' => $output,
-                'exit_code' => $exitCode,
+                'ok'            => false,
+                'message'       => sprintf(__s('The antivirus scan exceeded the configured timeout of %d seconds. The file was rejected.', 'securescan'), $timeout),
+                'status'        => 'error',
+                'scan_verdict'  => 'error',
+                'scan_evidence' => 'timeout',
+                'output'        => $output,
+                'exit_code'     => $exitCode,
+            ];
+        }
+
+        if ($outputLimitReached) {
+            return [
+                'ok'            => false,
+                'message'       => __s('The antivirus scanner produced too much output. The file was rejected.', 'securescan'),
+                'status'        => 'error',
+                'scan_verdict'  => 'error',
+                'scan_evidence' => 'output_limit_reached',
+                'output'        => $output,
+                'exit_code'     => $exitCode,
             ];
         }
 
         // ClamAV convention: 0 = no threat reported, 1 = infected, 2+ = scan error.
         // Exit code 0 is not sufficient evidence of a completed scan: ClamAV may
         // skip a file because of size/recursion limits while still returning 0.
-        $evidence = self::analyzeScanOutput($output, $file, $exitCode);
+        $allowOpaqueTarget = basename((string) ($argv[0] ?? '')) === 'clamdscan'
+            && (in_array('--fdpass', $argv, true) || in_array('--stream', $argv, true));
+        $evidence = self::analyzeScanOutput($output, $file, $exitCode, $allowOpaqueTarget);
 
         if ($exitCode === 0) {
             if ($evidence['verdict'] === 'clean') {
@@ -407,6 +566,18 @@ final class Antivirus
                 'message'       => __s('SecureScan could not confirm that the antivirus scanned the file. The file was rejected.', 'securescan'),
                 'status'        => 'error',
                 'scan_verdict'  => $evidence['verdict'],
+                'scan_evidence' => $evidence['evidence'],
+                'output'        => $output,
+                'exit_code'     => $exitCode,
+            ];
+        }
+
+        if ($exitCode === 1 && $evidence['verdict'] === 'not_scanned') {
+            return [
+                'ok'            => false,
+                'message'       => __s('SecureScan could not confirm that the antivirus scanned the file. The file was rejected.', 'securescan'),
+                'status'        => 'error',
+                'scan_verdict'  => 'not_scanned',
                 'scan_evidence' => $evidence['evidence'],
                 'output'        => $output,
                 'exit_code'     => $exitCode,
@@ -448,85 +619,189 @@ final class Antivirus
      *
      * @return array{verdict: string, evidence: string}
      */
-    private static function analyzeScanOutput(string $output, string $file, int $exitCode): array
-    {
+    private static function analyzeScanOutput(
+        string $output,
+        string $file,
+        int $exitCode,
+        bool $allowOpaqueTarget = false
+    ): array {
         $lines = preg_split('/\R/', $output) ?: [];
-        $target = rtrim($file);
-        $targetBase = basename($file);
+        $targetOk = false;
+        $targetFound = false;
+        $targetSkipEvidence = null;
+        $limitAlertFound = false;
+        $opaqueOk = false;
+        $opaqueFound = false;
+        $opaqueCount = 0;
+        $foreignResult = false;
+        $foreignFound = false;
+        $perFileResultCount = 0;
+        $globalSkipEvidence = null;
 
         $skipPatterns = [
-            'size_limit_reached' => '/(?:size limit reached|max(?:imum)?[ -]?(?:file|scan) size|maxfilesize|maxscansize|scan limit)/i',
+            'size_limit_reached' => '/(?:size limit reached|max(?:imum)?[ -]?(?:file|scan) size|maxfilesize|maxscansize|scan limit|heuristics\.limits\.exceeded)/i',
             'cannot_open' => '/(?:can\'t|cannot|unable to)\s+(?:open|access|read|scan)\b/i',
             'excluded' => '/\b(?:excluded|skipped|not scanned)\b/i',
             'symbolic_link' => '/\bsymbolic link\b/i',
         ];
 
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
+        foreach ($lines as $rawLine) {
+            $line = trim((string) $rawLine);
             if ($line === '') {
                 continue;
             }
 
-            foreach ($skipPatterns as $evidence => $pattern) {
-                if (preg_match($pattern, $line) === 1) {
-                    return [
-                        'verdict'  => 'not_scanned',
-                        'evidence' => $evidence,
-                    ];
+            // First bind the scanner's result to the exact path SecureScan
+            // passed. Never fall back to basename(): that value is uploader-controlled.
+            $targetResult = self::extractTargetResult($line, $file);
+            if ($targetResult !== null) {
+                $perFileResultCount++;
+                $targetResult = trim($targetResult);
+
+                if (preg_match('/\bHeuristics\.Limits\.Exceeded\b/i', $targetResult) === 1) {
+                    $targetSkipEvidence = 'size_limit_reached';
+                    $limitAlertFound = true;
+                    continue;
                 }
-            }
-        }
 
-        $targetOk = false;
-        $targetFound = false;
+                // An exit code of 1 must not be relabelled by an unrelated
+                // skip keyword elsewhere in the output. Explicit limit matches
+                // above remain distinct from real malware detections.
+                if ($exitCode !== 1) {
+                    foreach ($skipPatterns as $evidence => $pattern) {
+                        if (preg_match($pattern, $targetResult) === 1) {
+                            $targetSkipEvidence = $evidence;
+                            break 1;
+                        }
+                    }
+                }
 
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            if ($line === '') {
-                continue;
-            }
-
-            if (preg_match('/^(.*?)\s*:\s*OK$/i', $line, $matches) === 1) {
-                $reportedTarget = trim($matches[1], " \t\"'");
-                if ($reportedTarget === $target || basename($reportedTarget) === $targetBase) {
+                if (preg_match('/^OK$/i', $targetResult) === 1) {
                     $targetOk = true;
                     continue;
                 }
+
+                if (preg_match('/\bFOUND\s*$/i', $targetResult) === 1) {
+                    $targetFound = true;
+                }
+                continue;
             }
 
-            if (preg_match('/^(.*?)\s*:\s*.*\bFOUND$/i', $line, $matches) === 1) {
-                $reportedTarget = trim($matches[1], " \t\"'");
-                if ($reportedTarget === $target || basename($reportedTarget) === $targetBase) {
-                    $targetFound = true;
+            // clamdscan may identify a single requested file by a descriptor or
+            // stream label when those transport modes are explicitly selected.
+            if ($allowOpaqueTarget && preg_match('/^(fd\[\d+\]|stream)\s*:\s*(.*?)\s*$/i', $line, $matches) === 1) {
+                $perFileResultCount++;
+                $opaqueCount++;
+                $opaqueResult = trim($matches[2]);
+                if (preg_match('/\bHeuristics\.Limits\.Exceeded\b/i', $opaqueResult) === 1) {
+                    $targetSkipEvidence = 'size_limit_reached';
+                    $limitAlertFound = true;
+                    continue;
+                }
+                if ($exitCode !== 1) {
+                    foreach ($skipPatterns as $evidence => $pattern) {
+                        if (preg_match($pattern, $opaqueResult) === 1) {
+                            $targetSkipEvidence = $evidence;
+                            break 2;
+                        }
+                    }
+                }
+                if (preg_match('/^OK$/i', $opaqueResult) === 1) {
+                    $opaqueOk = true;
+                } elseif (preg_match('/\bFOUND\s*$/i', $opaqueResult) === 1) {
+                    $opaqueFound = true;
+                }
+                continue;
+            }
+
+            // A positive result for any other path makes the response
+            // ambiguous; it must never substitute for the target's own result.
+            if (preg_match('/^.+:\s*(?:OK|.*\bFOUND)\s*$/i', $line) === 1) {
+                $foreignResult = true;
+                $perFileResultCount++;
+                if (
+                    preg_match('/^.+:\s*(.*?)\s*$/', $line, $foreignMatches) === 1
+                    && preg_match('/\bFOUND\s*$/i', $foreignMatches[1]) === 1
+                    && preg_match('/\bHeuristics\.Limits\.Exceeded\b/i', $foreignMatches[1]) !== 1
+                ) {
+                    // Do not let a separate limit alert mask a real infection
+                    // reported elsewhere in an archive/verbose scanner output.
+                    $foreignFound = true;
+                }
+                continue;
+            }
+
+            // Scanner-wide warnings are parsed after removing their label, so
+            // keywords in an uploaded filename cannot trigger skip evidence.
+            if (preg_match('/^(?:WARNING|ERROR):\s*(.*)$/i', $line, $matches) === 1) {
+                foreach ($skipPatterns as $evidence => $pattern) {
+                    if (preg_match($pattern, $matches[1]) === 1) {
+                        $globalSkipEvidence = $evidence;
+                        break;
+                    }
                 }
             }
         }
 
         if ($exitCode === 1) {
+            // Treat a limit alert as an unscanned result only when it is the
+            // sole finding. If ClamAV also reports a real signature, preserve
+            // the infected verdict for audit accuracy.
+            if (!$targetFound && !$opaqueFound && !$foreignFound && $limitAlertFound) {
+                return ['verdict' => 'not_scanned', 'evidence' => 'size_limit_reached'];
+            }
+
             return [
-                'verdict'  => 'infected',
-                'evidence' => $targetFound ? 'target_found' : 'exit_code_infected',
+                'verdict' => 'infected',
+                'evidence' => $targetFound || $opaqueFound ? 'target_found' : 'exit_code_infected',
             ];
         }
 
-        if ($exitCode === 0 && $targetFound) {
-            return [
-                'verdict'  => 'unknown',
-                'evidence' => 'contradictory_output',
-            ];
+        if ($targetSkipEvidence !== null) {
+            return ['verdict' => 'not_scanned', 'evidence' => $targetSkipEvidence];
+        }
+        if ($globalSkipEvidence !== null) {
+            return ['verdict' => 'not_scanned', 'evidence' => $globalSkipEvidence];
+        }
+
+        if ($foreignResult || $perFileResultCount > 1) {
+            return ['verdict' => 'unknown', 'evidence' => 'ambiguous_output'];
+        }
+
+        if ($exitCode === 0 && ($targetFound || $opaqueFound)) {
+            return ['verdict' => 'unknown', 'evidence' => 'contradictory_output'];
         }
 
         if ($exitCode === 0 && $targetOk) {
-            return [
-                'verdict'  => 'clean',
-                'evidence' => 'target_ok',
-            ];
+            return ['verdict' => 'clean', 'evidence' => 'target_ok'];
         }
 
-        return [
-            'verdict'  => 'unknown',
-            'evidence' => 'no_positive_scan_evidence',
-        ];
+        if ($exitCode === 0 && $allowOpaqueTarget && $opaqueCount === 1 && $opaqueOk) {
+            return ['verdict' => 'clean', 'evidence' => 'target_ok_transport'];
+        }
+
+        return ['verdict' => 'unknown', 'evidence' => 'no_positive_scan_evidence'];
+    }
+
+    /**
+     * Extract the result body only when a line starts with the exact target path.
+     * Handles the optional quoting used by scanner output without matching a
+     * different file that happens to share the same basename.
+     */
+    private static function extractTargetResult(string $line, string $target): ?string
+    {
+        foreach (['"' . $target . '"', "'" . $target . "'", $target] as $prefix) {
+            if (!str_starts_with($line, $prefix)) {
+                continue;
+            }
+
+            $remainder = substr($line, strlen($prefix));
+            if (preg_match('/^\s*:\s*(.*?)\s*$/s', $remainder, $matches) === 1) {
+                return trim($matches[1]);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -552,6 +827,14 @@ final class Antivirus
             return null;
         }
 
+        // Do not allow ClamAV quarantine actions from this integration. These
+        // options can copy/move infected content outside GLPI's rejected temp file.
+        foreach ($tokens as $token) {
+            if (preg_match('/^--(?:copy|move|remove)(?:=|$)/i', $token) === 1) {
+                return null;
+            }
+        }
+
         $allowlist = ['clamdscan', 'clamscan'];
         if (!self::isExecutableAllowed($executable, $allowlist)) {
             return null;
@@ -563,12 +846,28 @@ final class Antivirus
         }
 
         $tokens[0] = $resolved;
+
+        if (basename($resolved) === 'clamscan') {
+            // Force a non-clean finding when ClamAV reaches its configured
+            // file/scan/recursion limits. Remove any conflicting user setting.
+            $tokens = array_values(array_filter(
+                $tokens,
+                static fn (string $token): bool => preg_match('/^--alert-exceeds-max(?:=.*)?$/i', $token) !== 1
+            ));
+            $filePosition = array_search($file, $tokens, true);
+            if ($filePosition === false) {
+                return null;
+            }
+            array_splice($tokens, $filePosition, 0, ['--alert-exceeds-max=yes']);
+        }
+
         return $tokens;
     }
 
     public static function getTestedConfigurationHash(string $command): string
     {
-        return hash('sha256', $command);
+        // Invalidate test results from previous verdict/parser implementations.
+        return hash('sha256', "verdict-policy=3\n" . $command);
     }
 
     public static function validateCommand(string $command): ?string
@@ -716,18 +1015,13 @@ final class Antivirus
     }
 
     /**
-     * Fixed directories from which ClamAV executables may be resolved.
-     * PHP_BINDIR is included because packaged PHP installations may keep
-     * administrator-approved scanner helpers alongside the PHP binary.
+     * Fixed system directories from which ClamAV executables may be resolved.
+     * PHP_BINDIR is intentionally excluded because custom PHP installations
+     * can place it in a directory writable by the web-service account.
      */
     private static function getExecutableDirectories(): array
     {
-        $directories = ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin', '/sbin'];
-        if (defined('PHP_BINDIR')) {
-            $directories[] = PHP_BINDIR;
-        }
-
-        return array_unique($directories);
+        return ['/usr/bin', '/usr/local/bin', '/bin', '/usr/sbin', '/sbin'];
     }
 
 }

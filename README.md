@@ -1,5 +1,5 @@
 <p align="center">
-  <p align="center"><img src="logo.png" alt="SecureScan" width="128" height="128">
+  <p align="center"><img src="logo.png" alt="SecureScan" width="128" height="128"></p>
 </p>
 <h1 align="center">SecureScan</h1>
 <p align="center">
@@ -117,6 +117,15 @@ clamdscan --no-summary {file}
 
 `{file}` is replaced internally by the temporary path of the uploaded file.
 
+### ClamAV scan-limit handling (important)
+
+ClamAV can report a file as `OK` even when a scan limit caused content to be skipped. SecureScan cannot infer the daemon's active `clamd.conf` settings just from that line, so the scanner must be configured to flag exceeded limits:
+
+- **When using `clamdscan` (the default):** set `AlertExceedsMax yes` in the daemon's `clamd.conf` and restart/reload `clamd`. This server-side setting is mandatory; it cannot be forced by a `clamdscan` client argument.
+- **When using `clamscan`:** SecureScan automatically passes `--alert-exceeds-max=yes` and removes any conflicting value from the configured command.
+
+With this setting, ClamAV marks exceeded file-size, scan-size, or recursion limits as `Heuristics.Limits.Exceeded`, and SecureScan rejects the upload as `not_scanned` instead of treating it as clean. Validate the exact command using **Test antivirus** after changes to ClamAV or the plugin. When you click **Test antivirus**, SecureScan scans both a clean test file and a small harmless ZIP archive nested beyond ClamAV’s supported recursion ceiling. The command is approved only if the second test returns ClamAV’s `Heuristics.Limits.Exceeded` finding; this check catches a `clamdscan` daemon that has not enabled `AlertExceedsMax`. Re-run this test after changes to the plugin or ClamAV configuration. The probe contains only harmless text and is removed after testing.
+
 ### Command restrictions
 
 For security, SecureScan does not treat the configured command as an unrestricted shell command. Shell syntax such as the following is intentionally not accepted:
@@ -128,7 +137,7 @@ For security, SecureScan does not treat the configured command as an unrestricte
 - shell boolean operators (`&&`, `||`)
 - other shell constructs that would turn the configuration field into arbitrary command execution
 
-The ClamAV scanner executable and arguments are converted into a direct argument vector and executed without a shell. The executable is validated automatically and must be `clamdscan` or `clamscan`, including an absolute path to one of those binaries. Basenames are resolved only from fixed system directories; explicit absolute paths must resolve to approved scanner binaries. This prevents shell metacharacters from becoming a second command language while keeping the configuration simple for administrators.
+The ClamAV scanner executable and arguments are converted into a direct argument vector and executed without a shell. The executable is validated automatically and must be `clamdscan` or `clamscan`, including an absolute path to one of those binaries. Basenames are resolved only from fixed system directories; explicit absolute paths must resolve to approved scanner binaries. This prevents shell metacharacters from becoming a second command language while keeping the configuration simple for administrators. SecureScan also rejects ClamAV quarantine/action options `--copy`, `--move`, and `--remove`, including their `=...` forms, because they can persist or alter infected content outside GLPI's rejected temporary upload. The executable is not resolved from `PHP_BINDIR`; it must be installed in a fixed system directory such as `/usr/bin` or `/usr/local/bin`.
 
 > The exact command accepted by SecureScan depends on the command validation implemented by the installed plugin version. Always test the command from **Setup → Plugins → SecureScan → Configure** before enabling protection.
 
@@ -158,7 +167,7 @@ Example:
 clamdscan --no-summary {file}
 ```
 
-The configured scanner command must keep the per-file result in its output so SecureScan can positively verify a clean scan. The recommended `--no-summary` form does this. Do not use output-suppressing options such as `--quiet` when they prevent ClamAV from returning the target file result; SecureScan will reject an otherwise successful `exit code 0` when no positive `OK` evidence is available.
+The configured scanner command must keep the per-file result in its output so SecureScan can positively verify a clean scan. The recommended `--no-summary` form does this. Do not use output-suppressing options such as `--quiet` when they prevent ClamAV from returning the target file result; SecureScan will reject an otherwise successful `exit code 0` when no positive `OK` evidence is available. After upgrading to 1.0.3, run **Test antivirus** again: the verdict policy changed and old test hashes are intentionally invalidated. Document uploads remain blocked until the updated clean-file and scan-limit checks pass.
 
 ### Test antivirus
 
@@ -188,7 +197,7 @@ Configuration changes are saved through SecureScan's native GLPI/Symfony control
 
 ## Scan verification and audit evidence
 
-Starting with SecureScan 1.0.2, an antivirus exit code of `0` is not accepted as proof of a clean file by itself. SecureScan requires positive output evidence for the exact temporary file and accepts the clean result only when ClamAV reports that target as `OK`.
+Starting with SecureScan 1.0.2, an antivirus exit code of `0` is not accepted as proof of a clean file by itself. In SecureScan 1.0.3, the administrator test also checks that ClamAV reports scan-limit exhaustion instead of silently treating a skipped scan as clean. SecureScan requires positive output evidence for the exact temporary file and accepts the clean result only when ClamAV reports that target as `OK`.
 
 If ClamAV reports a scan limit, skipped/excluded file, symbolic-link condition, access/open failure, or another ambiguous response, SecureScan fails closed and rejects the upload. This prevents a file that was not actually scanned from being stored as clean.
 
@@ -223,9 +232,9 @@ A file that ClamAV did not confirm as scanned is recorded explicitly and rejecte
 }
 ```
 
-Common normalized evidence values include `target_ok`, `target_found`, `size_limit_reached`, `cannot_open`, `excluded`, `symbolic_link`, `exit_code_infected`, `contradictory_output`, `no_positive_scan_evidence`, and `timeout`.
+Common normalized evidence values include `target_ok`, `target_ok_transport` (a single-file `clamdscan --fdpass`/`--stream` response when explicitly configured), `target_found`, `size_limit_reached`, `cannot_open`, `excluded`, `symbolic_link`, `exit_code_infected`, `contradictory_output`, `ambiguous_output`, `no_positive_scan_evidence`, `configuration_not_retested`, `timeout`, and `output_limit_reached`. Target results are matched against the exact temporary path, not only the basename, and skip indicators are checked in the result text rather than the uploaded filename.
 
-Raw scanner output is intentionally not written to the audit file. File contents are never logged.
+Raw scanner output is intentionally not written to the audit file. File contents are never logged. Output is capped at 64 KiB; a scanner that exceeds that cap is terminated and the upload is rejected with `output_limit_reached`.
 
 ## Antivirus test
 

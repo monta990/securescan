@@ -24,6 +24,19 @@ function plugin_securescan_install(): bool
 {
     $current = \Config::getConfigurationValues('plugin:securescan');
 
+    // Remove the obsolete pre-1.0.1 executable-list setting during both install
+    // and upgrade. It is no longer read by SecureScan and must not linger.
+    try {
+        $legacyConfig = new \Config();
+        $legacyConfig->deleteByCriteria([
+            'context' => 'plugin:securescan',
+            'name'    => 'securescan_allowed_executables',
+        ]);
+    } catch (\Throwable $e) {
+        // Cleanup is best-effort; a legacy row must never make plugin upgrades fail.
+        \Toolbox::logDebug($e);
+    }
+
     $defaults = [
         'securescan_enabled' => 0,
         'securescan_command' => 'clamdscan --no-summary {file}',
