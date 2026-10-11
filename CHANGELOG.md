@@ -3,6 +3,30 @@
 All notable changes to this project are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 1.0.3 - 2026-10-11
+
+### Security and scan-verdict correctness
+
+- Parse each per-file result only after binding it to the exact temporary path; removed the uploader-controlled basename fallback.
+- Evaluate skip/limit indicators against the scanner's result text rather than the complete line, preventing ordinary filenames such as `max file size policy.pdf` from being rejected falsely.
+- Treat `Heuristics.Limits.Exceeded` as an unscanned/limited result and preserve malware detections as infected even if an unrelated warning also appears.
+- Force `--alert-exceeds-max=yes` for `clamscan`; document the mandatory `AlertExceedsMax yes` daemon setting for `clamdscan`.
+- Add guarded parser support for single-target `fd[n]: OK` / `stream: OK` output forms only when `clamdscan --fdpass` or `--stream` is explicitly selected; the administrator test must confirm the exact mode against the installed ClamAV before it is approved.
+- Record timeout and output-cap evidence. Terminate the scanner when its captured output exceeds 64 KiB instead of allowing it to continue until timeout.
+- Bind scan acceptance to a versioned test hash; active uploads fail closed with a clear message until the current command is retested after an upgrade.
+- Extend the administrator test with a harmless 102-layer nested ZIP probe; the command is not approved unless ClamAV explicitly reports `Heuristics.Limits.Exceeded` for the probe. This verifies limit-alert behavior instead of relying only on documentation.
+- Reject `--copy`, `--move`, and `--remove` ClamAV actions so rejected files cannot be copied/moved outside GLPI's temporary area by the configured scanner.
+- Exclude `PHP_BINDIR` from executable trust directories and purge the obsolete `securescan_allowed_executables` setting during install/update.
+
+### Version checker and audit
+
+- Preserve the last known-good GitHub release version through transient failures using a bounded stale cache.
+- Align audit record fields and correct the English history-tab docblock.
+
+### Compatibility
+
+- Retained the Document pre/post hooks, native GLPI configuration, controller authorization, POST/CSRF handling, audit format, and GLPI 11/12 compatibility declarations.
+
 ## 1.0.2 - 2026-09-04
 
 ### Security

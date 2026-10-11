@@ -16,18 +16,18 @@ final class Audit
     public static function record(string $type, array $result, string $file, ?object $item = null): void
     {
         $record = [
-            'time'       => date('c'),
-            'type'       => $type,
-            'status'        => $result['status'] ?? ($result['ok'] ? 'clean' : 'error'),
-            'scan_verdict'  => $result['scan_verdict'] ?? null,
-            'scan_evidence' => $result['scan_evidence'] ?? null,
-            'exit_code'     => $result['exit_code'] ?? null,
-            'size'       => is_file($file) ? filesize($file) : null,
-            'sha256'     => is_file($file) ? hash_file('sha256', $file) : null,
-            'temporary'  => is_file($file) ? basename($file) : null,
-            'itemtype'   => $item !== null ? $item::class : null,
-            'items_id'   => self::getItemId($item),
-            'user_id'    => class_exists('Session') ? (int) \Session::getLoginUserID() : 0,
+            'time'           => date('c'),
+            'type'           => $type,
+            'status'         => $result['status'] ?? ($result['ok'] ? 'clean' : 'error'),
+            'scan_verdict'   => $result['scan_verdict'] ?? null,
+            'scan_evidence'  => $result['scan_evidence'] ?? null,
+            'exit_code'      => $result['exit_code'] ?? null,
+            'size'           => is_file($file) ? filesize($file) : null,
+            'sha256'         => is_file($file) ? hash_file('sha256', $file) : null,
+            'temporary'      => is_file($file) ? basename($file) : null,
+            'itemtype'       => $item !== null ? $item::class : null,
+            'items_id'       => self::getItemId($item),
+            'user_id'        => class_exists('Session') ? (int) \Session::getLoginUserID() : 0,
         ];
 
         self::write($record);
@@ -49,18 +49,18 @@ final class Audit
         ?object $item = null
     ): void {
         $record = [
-            'time'       => date('c'),
-            'type'       => $type,
-            'status'        => $status,
-            'scan_verdict'  => $scanVerdict,
-            'scan_evidence' => $scanEvidence,
-            'exit_code'     => $exitCode,
-            'size'       => $size,
-            'sha256'     => $sha256,
-            'temporary'  => null,
-            'itemtype'   => $item !== null ? $item::class : null,
-            'items_id'   => self::getItemId($item),
-            'user_id'    => class_exists('Session') ? (int) \Session::getLoginUserID() : 0,
+            'time'           => date('c'),
+            'type'           => $type,
+            'status'         => $status,
+            'scan_verdict'   => $scanVerdict,
+            'scan_evidence'  => $scanEvidence,
+            'exit_code'      => $exitCode,
+            'size'           => $size,
+            'sha256'         => $sha256,
+            'temporary'      => null,
+            'itemtype'       => $item !== null ? $item::class : null,
+            'items_id'       => self::getItemId($item),
+            'user_id'        => class_exists('Session') ? (int) \Session::getLoginUserID() : 0,
         ];
 
         self::write($record);
@@ -70,7 +70,7 @@ final class Audit
     /**
      * Add the successful scan result to the native GLPI history of the
      * document. This keeps the audit visible from the document's
-     * Histórico tab while the detailed JSON evidence remains in
+     * History tab while the detailed JSON evidence remains in
      * files/_log/securescan.log.
      */
     private static function writeDocumentHistory(string $status, ?string $sha256, ?object $item): void

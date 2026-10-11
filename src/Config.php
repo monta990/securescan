@@ -97,10 +97,17 @@ final class Config extends \Config
             return;
         }
 
+        $currentConfig = self::getConfig();
+        $command = (string) ($currentConfig['securescan_command'] ?? self::DEFAULT_COMMAND);
+        $testedHash = (string) ($currentConfig['securescan_tested_hash'] ?? '');
+        $needsRetest = (int) ($currentConfig['securescan_enabled'] ?? 0) === 1
+            && !hash_equals(Antivirus::getTestedConfigurationHash($command), $testedHash);
+
         TemplateRenderer::getInstance()->display('@securescan/config.html.twig', [
-            'current_config'  => self::getConfig(),
-            'can_edit'        => true,
-            'version_status'  => (int) (self::getConfig()['securescan_auto_update_check'] ?? 0) === 1
+            'current_config' => $currentConfig,
+            'can_edit'       => true,
+            'needs_retest'   => $needsRetest,
+            'version_status' => (int) ($currentConfig['securescan_auto_update_check'] ?? 0) === 1
                 ? VersionChecker::check()
                 : null,
         ]);

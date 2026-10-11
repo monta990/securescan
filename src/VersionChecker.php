@@ -35,9 +35,21 @@ final class VersionChecker
         $cache = self::readCache();
 
         if ($cache !== null) {
-            $cacheTtl = (($cache['status'] ?? 'success') === 'failure') ? self::FAILURE_CACHE_TTL : self::CACHE_TTL;
+            $cacheStatus = $cache['status'] ?? 'success';
+            $cacheTtl = $cacheStatus === 'success' ? self::CACHE_TTL : self::FAILURE_CACHE_TTL;
             if ((time() - $cache['checked_at']) < $cacheTtl) {
-                if (($cache['status'] ?? 'success') === 'failure') {
+                if ($cacheStatus === 'failure') {
+                    if ($cache['latest_version'] !== null) {
+                        // Older builds stored a known-good release alongside a
+                        // failure flag. Keep showing that last verified version.
+                        return self::buildResult(
+                            $installed,
+                            $cache['latest_version'],
+                            $cache['release_url'],
+                            'stale'
+                        );
+                    }
+
                     return [
                         'installed_version' => $installed,
                         'latest_version' => null,
@@ -51,7 +63,7 @@ final class VersionChecker
                     $installed,
                     $cache['latest_version'],
                     $cache['release_url'],
-                    'cached'
+                    $cacheStatus === 'stale' ? 'stale' : 'cached'
                 );
             }
         }
@@ -68,8 +80,10 @@ final class VersionChecker
             }
         }
 
-        if ($cache !== null && ($cache['status'] ?? 'success') !== 'failure') {
-            self::writeCache($cache['latest_version'], $cache['release_url'], 'failure');
+        if ($cache !== null && $cache['latest_version'] !== null) {
+            // Keep the last verified version after a transient network/API failure.
+            // A short stale TTL prevents repeated requests on every page load.
+            self::writeCache($cache['latest_version'], $cache['release_url'], 'stale');
             return self::buildResult($installed, $cache['latest_version'], $cache['release_url'], 'stale');
         }
 
@@ -261,7 +275,7 @@ final class VersionChecker
             : self::RELEASES_URL;
 
         $status = isset($cache['status']) && is_string($cache['status']) ? $cache['status'] : 'success';
-        if (!in_array($status, ['success', 'failure'], true)) {
+        if (!in_array($status, ['success', 'failure', 'stale'], true)) {
             $status = 'success';
         }
 
@@ -269,7 +283,7 @@ final class VersionChecker
             return null;
         }
 
-        if ($status === 'success' && $version === null) {
+        if (in_array($status, ['success', 'stale'], true) && $version === null) {
             return null;
         }
 
