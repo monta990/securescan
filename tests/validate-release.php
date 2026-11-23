@@ -25,7 +25,8 @@ if($manifest===false){
     }
     if(count($manifest->authors->author)<1)$errors[]='plugin.xml has no author.';
     if((string)$manifest->license!=='GPLv3+')$errors[]='plugin.xml license mismatch.';
-    $declaredLanguages=array_map('strval',iterator_to_array($manifest->langs->lang));
+    $declaredLanguages=[];
+    foreach($manifest->langs->lang as $language)$declaredLanguages[]=trim((string)$language);
     sort($declaredLanguages);
     if($declaredLanguages!==['en_GB','es_MX'])$errors[]='plugin.xml language declarations mismatch.';
     foreach(['en','es']as$lang){
