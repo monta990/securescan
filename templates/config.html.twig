@@ -1,16 +1,37 @@
 {% import "components/form/fields_macros.html.twig" as fields %}
 <style>
-    .securescan-enabled-field .form-label {
-        white-space: nowrap;
+    /* GLPI places Config tabs in a narrow Bootstrap column. Expand only the
+       column containing SecureScan, so this tab uses the available workspace. */
+    [class*="col-"]:has(.securescan-root),
+    .container:has(.securescan-root),
+    .tab-content:has(.securescan-root),
+    .tab-pane:has(.securescan-root),
+    .mx-auto:has(.securescan-root) {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .securescan-root,
+    .securescan-root > .card {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0;
+    }
+
+    .securescan-root .form-control,
+    .securescan-root .form-select {
+        max-width: 100%;
     }
 </style>
-<div class="card mx-auto" style="max-width: 980px;">
+<div class="securescan-root w-100">
+<div class="card w-100">
     <div class="card-header">
         <div class="card-title d-flex align-items-center gap-2">
             <span class="avatar bg-blue-lt"><i class="ti ti-shield-check"></i></span>
             <div>
                 <div class="h2 mb-0">{{ __('SecureScan', 'securescan') }}</div>
-                <div class="text-muted">{{ __('Analyze every file before it is published using the server antivirus.', 'securescan') }}</div>
+                <div class="text-muted">{{ __('Analyze every uploaded document with the selected scan engine before it is stored.', 'securescan') }}</div>
             </div>
         </div>
     </div>
@@ -18,7 +39,7 @@
         {% if needs_retest %}
             <div class="alert alert-warning d-flex align-items-start mb-2" role="alert">
                 <i class="ti ti-alert-triangle me-2 mt-1" aria-hidden="true"></i>
-                <div>{{ __('SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents.', 'securescan') }}</div>
+                <div>{{ __('SecureScan must be re-tested after this plugin update. Run Test selected engine with the current command before uploading documents.', 'securescan') }}</div>
             </div>
         {% endif %}
         {% if version_status and version_status.latest_version %}
@@ -55,9 +76,20 @@
     <form name="form" action="{{ path('/plugins/securescan/Config/Save') }}" method="POST">
         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
         <div class="card-body">
-            <div class="mb-4 securescan-enabled-field">
-                {{ fields.dropdownYesNo('securescan_enabled', current_config['securescan_enabled'], __('Enable scanning before publishing', 'securescan')) }}
-                <div class="form-hint">{{ __('The file remains temporary until the antivirus returns a clean result.', 'securescan') }}<br>{{ __('You must run Test antivirus successfully for the current command before enabling scanning.', 'securescan') }}</div>
+            {% if current_config['securescan_engine_conflict']|default(false) %}
+                <div class="alert alert-danger mb-3" role="alert">
+                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
+                    {{ __('The saved configuration has more than one engine enabled. Select one engine and save before uploading documents.', 'securescan') }}
+                </div>
+            {% endif %}
+            <div class="mb-4">
+                <label class="form-label" for="securescan-engine">{{ __('Active scan engine', 'securescan') }}</label>
+                <select class="form-select" id="securescan-engine" name="securescan_engine">
+                    <option value="disabled" {% if current_config['securescan_engine'] == 'disabled' %}selected{% endif %}>{{ __('Disabled', 'securescan') }}</option>
+                    <option value="clamav" {% if current_config['securescan_engine'] == 'clamav' %}selected{% endif %}>{{ __('ClamAV (server)', 'securescan') }}</option>
+                    <option value="virustotal" {% if current_config['securescan_engine'] == 'virustotal' %}selected{% endif %}>{{ __('VirusTotal (cloud)', 'securescan') }}</option>
+                </select>
+                <div class="form-hint">{{ __('Select one engine only: ClamAV or VirusTotal. They cannot run together. Disabled turns off SecureScan scanning.', 'securescan') }}</div>
             </div>
             <div class="mb-4">
                 <label class="form-label" for="securescan-command">{{ __('Scan command', 'securescan') }}</label>
@@ -67,7 +99,7 @@
                 <div class="form-hint text-muted mt-1">{{ __('Document scan results are recorded in GLPI file log: files/_log/securescan.log. File contents are never logged.', 'securescan') }}</div>
                 <div class="form-hint mt-1"><i class="ti ti-file-text me-1" aria-hidden="true"></i><a href="{{ path('/front/logs.php') }}">{{ __('Go to logs', 'securescan') }}</a></div>
                 <div class="form-hint text-muted mt-2">
-                    <i class="ti ti-shield-check me-1" aria-hidden="true"></i>{{ __('SecureScan currently supports ClamAV only. The executable is validated automatically and must be clamdscan or clamscan.', 'securescan') }}
+                    <i class="ti ti-shield-check me-1" aria-hidden="true"></i>{{ __('This command is used only when ClamAV (server) is selected as the active scan engine.', 'securescan') }}
                 </div>
                 <div class="alert alert-warning mt-3 mb-0" role="note">
                     <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>{{ __('For clamdscan, set AlertExceedsMax yes in clamd.conf and restart clamd. Without this daemon setting, ClamAV may report a file skipped because of scan limits as OK. SecureScan automatically enables --alert-exceeds-max=yes when using clamscan.', 'securescan') }}
@@ -82,11 +114,57 @@
                     <div class="form-hint">{{ __('When enabled, SecureScan checks GitHub for stable releases. Checks are cached and do not run on every page load.', 'securescan') }}</div>
                 </div>
             </div>
+
+            <hr class="my-4">
+            <section aria-labelledby="securescan-virustotal-heading">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="avatar bg-purple-lt"><i class="ti ti-cloud-lock"></i></span>
+                    <div>
+                        <h3 class="h3 mb-0" id="securescan-virustotal-heading">{{ __('VirusTotal cloud engine', 'securescan') }}</h3>
+                        <div class="text-muted small">{{ __('Alternative cloud scan engine. It runs on its own instead of ClamAV.', 'securescan') }}</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-hint">{{ __('Select VirusTotal in Active scan engine to use it by itself. ClamAV will not run in this mode. Only a completed clean VirusTotal report allows the file to be stored; malicious, suspicious, missing, pending or unavailable results reject the upload.', 'securescan') }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="securescan-virustotal-api-key">{{ __('VirusTotal API key', 'securescan') }}</label>
+                    <input type="password" class="form-control" id="securescan-virustotal-api-key" name="securescan_virustotal_api_key" value="" autocomplete="new-password" spellcheck="false">
+                    {% if current_config['securescan_virustotal_api_key_configured']|default(false) %}
+                        <div class="form-hint text-success"><i class="ti ti-lock-check me-1"></i>{{ __('An API key is configured and stored encrypted by GLPI. Leave this field blank to keep the existing key.', 'securescan') }}</div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="securescan-virustotal-remove-key" name="securescan_virustotal_remove_key" value="1">
+                            <label class="form-check-label" for="securescan-virustotal-remove-key">{{ __('Remove stored VirusTotal API key', 'securescan') }}</label>
+                        </div>
+                    {% else %}
+                        <div class="form-hint">{{ __('The API key is stored encrypted with the GLPI instance security key and is never displayed again.', 'securescan') }}</div>
+                    {% endif %}
+                    <div class="form-hint"><a href="https://www.virustotal.com/gui/my-apikey" target="_blank" rel="noopener noreferrer">{{ __('Open VirusTotal API key page', 'securescan') }}</a></div>
+                </div>
+
+                <div class="mb-3">
+                    {{ fields.dropdownYesNo('securescan_virustotal_auto_upload', current_config['securescan_virustotal_auto_upload']|default(0), __('Submit unknown files to VirusTotal automatically', 'securescan')) }}
+                    <div class="form-hint">{{ __('Off by default. When enabled, an unknown file up to 32 MB is submitted to VirusTotal. SecureScan keeps checking the analysis status until VirusTotal reports completion, and stores the document only after a completed clean result. Host-level request timeouts may still apply.', 'securescan') }}</div>
+                </div>
+
+                <div class="alert alert-warning mb-0" role="alert">
+                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
+                    <strong>{{ __('Privacy and license restrictions', 'securescan') }}</strong>
+                    <ul class="mb-1 mt-1">
+                        <li>{{ __('VirusTotal Public/Community API is limited (4 requests per minute and 500 per day) and must not be used in commercial products, services or business workflows. Use an appropriate Premium agreement for corporate production.', 'securescan') }}</li>
+                        <li>{{ __('Files submitted to VirusTotal and queried indicators are added to its shared dataset and may be accessible to the security community. Never submit confidential, personal or business-sensitive documents.', 'securescan') }}</li>
+                    </ul>
+                    <a href="https://docs.virustotal.com/reference/public-vs-premium-api" target="_blank" rel="noopener noreferrer">{{ __('VirusTotal API terms and limits', 'securescan') }}</a>
+                </div>
+            </section>
         </div>
         <div class="card-footer d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i><span>{{ _x('button', 'Save') }}</span></button>
-            <button type="submit" formaction="{{ path('/plugins/securescan/Antivirus/Test') }}" class="btn btn-outline-primary"><i class="ti ti-shield-check"></i><span>{{ __('Test antivirus', 'securescan') }}</span></button>
+            <button type="submit" formaction="{{ path('/plugins/securescan/Antivirus/Test') }}" class="btn btn-outline-primary"><i class="ti ti-shield-check"></i><span>{{ __('Test selected engine', 'securescan') }}</span></button>
         </div>
     </form>
     {% endif %}
+</div>
 </div>

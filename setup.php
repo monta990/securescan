@@ -20,10 +20,12 @@
 
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Securescan\Config as SecureScanConfig;
+use GlpiPlugin\Securescan\Controller\VirusTotalScanController;
+use GlpiPlugin\Securescan\EngineSelector;
 
 use function Safe\define;
 
-define('PLUGIN_SECURESCAN_VERSION', '1.0.3');
+define('PLUGIN_SECURESCAN_VERSION', '2.0.0');
 define('PLUGIN_SECURESCAN_MIN_GLPI_VERSION', '11.0.7');
 define('PLUGIN_SECURESCAN_MAX_GLPI_VERSION', '12.99.99');
 define('PLUGIN_SECURESCAN_MIN_PHP_VERSION', '8.2.0');
@@ -32,6 +34,23 @@ function plugin_init_securescan(): void
 {
     global $PLUGIN_HOOKS;
 
+    // Add asynchronous VirusTotal preflight whenever VirusTotal is selected.
+    // Unknown-file submission remains controlled by its separate configuration
+    // option; even hash-only lookups must stay outside the pre-storage hook.
+    if (Session::getLoginUserID()) {
+        VirusTotalScanController::cleanupExpiredJobsOnRequest();
+        $secureScanConfig = SecureScanConfig::getConfig();
+        $selectedEngine = EngineSelector::resolve($secureScanConfig);
+        if ($selectedEngine === EngineSelector::VIRUSTOTAL) {
+            $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['securescan'][] = 'js/securescan-wait.js?v=' . PLUGIN_SECURESCAN_VERSION;
+            $PLUGIN_HOOKS[Hooks::ADD_CSS]['securescan'][] = 'css/securescan-wait.css';
+        }
+    }
+
+    // Let GLPI encrypt the VirusTotal API key with its instance security key.
+    (new \Glpi\Plugin\HookManager('securescan'))->registerSecureConfigs([
+        'securescan_virustotal_api_key',
+    ]);
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['securescan'] = [
         \Document::class => [
