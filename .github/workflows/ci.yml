@@ -20,7 +20,7 @@ jobs:
       matrix:
         php: ['8.2', '8.3', '8.4', '8.5', '8.6']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: shivammathur/setup-php@v2
@@ -28,10 +28,10 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: curl, dom, fileinfo, gettext, intl, json, mbstring, openssl, simplexml, xml, xmlreader, xmlwriter, zip
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - run: python -m pip install --disable-pip-version-check 'Babel==2.18.0'
@@ -43,10 +43,10 @@ jobs:
     needs: cli-tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - run: python -m pip install --disable-pip-version-check 'Babel==2.18.0'
@@ -64,7 +64,7 @@ jobs:
           if unzip -Z1 "$archive" | grep -Eq '^securescan/(tests|tools|scripts|.github)(/|$)|^securescan/HANDOFF[.]md$'; then
             echo "Development files leaked into the installation ZIP." >&2; exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: securescan-2.0.0-installable
           path: ${{ runner.temp }}/securescan-dist/securescan-2.0.0.zip*
