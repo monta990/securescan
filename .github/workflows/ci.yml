@@ -67,6 +67,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: securescan-2.0.0-installable
-          path: $RUNNER_TEMP/securescan-dist/securescan-2.0.0.zip*
+          path: ${{ runner.temp }}/securescan-dist/securescan-2.0.0.zip*
           if-no-files-found: error
           retention-days: 14
