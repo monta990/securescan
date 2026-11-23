@@ -536,7 +536,7 @@ final class VirusTotal
         if (is_link($base) || is_link($directory)) {
             return null;
         }
-        if (!is_dir($directory) && (!$createDirectory || (!@mkdir($directory, 0700, true) && !is_dir($directory))) {
+        if (!is_dir($directory) && (!$createDirectory || (!@mkdir($directory, 0700, true) && !is_dir($directory)))) {
             return null;
         }
         @chmod($base, 0700);
