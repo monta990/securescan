@@ -19,7 +19,7 @@ def main() -> int:
     release = next((item for item in root.findall("./versions/version") if (item.findtext("num") or "").strip() == EXPECTED_VERSION), None)
     compatibility = sorted((item.text or "").strip() for item in release.findall("compatibility")) if release is not None else []
     checks["GLPI compatibility"] = compatibility == ["~11.0.7", "~12.0"]
-    checks["release download URL"] = release is not None and (release.findtext("download_url") or "").strip().endswith(f"/releases/download/{EXPECTED_VERSION}/securescan.zip")
+    checks["release download URL"] = release is not None and (release.findtext("download_url") or "").strip().endswith(f"/releases/download/{EXPECTED_VERSION}/securescan-{EXPECTED_VERSION}.zip")
     failed = False
     for label, passed in checks.items():
         print(f"{'PASS' if passed else 'FAIL'}: plugin.xml {label}"); failed = failed or not passed
