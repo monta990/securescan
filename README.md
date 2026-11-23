@@ -199,6 +199,8 @@ clamdscan --no-summary {file}
 
 The command is executed without a shell and is used only for the ClamAV engine. The executable must resolve to `clamdscan` or `clamscan`; arbitrary programs and shell operators are not accepted.
 
+The command must retain the per-file result in its output so SecureScan can positively verify the exact upload. The recommended `--no-summary` form does this. Avoid output-suppressing options such as `--quiet` when they prevent ClamAV from returning the target file result; an otherwise successful exit code of `0` is rejected when no positive `OK` evidence is available.
+
 The **Antivirus timeout** defaults to **30 seconds**. The allowed range is **5 to 300 seconds**. A timeout rejects the file.
 
 For `clamdscan`, set `AlertExceedsMax yes` in `clamd.conf` and restart or reload the `clamd` service. When `clamscan` is used, SecureScan adds `--alert-exceeds-max=yes` automatically and removes conflicting values. See [ClamAV scan-limit handling](#clamav-scan-limit-handling-important) for why this is important.
@@ -233,7 +235,7 @@ See [VirusTotal API terms and limits](https://docs.virustotal.com/reference/publ
 
 ### Automatic version checks
 
-Automatic GitHub stable-release checks are **disabled by default**. When enabled, SecureScan checks for stable releases and caches the result so an unavailable GitHub service does not block normal configuration-page rendering on every request.
+Automatic GitHub stable-release checks are **disabled by default**. When enabled, SecureScan checks for stable releases and caches successful checks for **six hours** and failed checks for **30 minutes** so an unavailable GitHub service does not block normal configuration-page rendering on every request.
 
 ### Test selected engine
 
@@ -246,7 +248,7 @@ A successful test is recorded separately from normal document scans. A changed C
 
 ### Save
 
-Save the selected engine and its settings from the same configuration page. Do not enable a second engine in the underlying configuration. If there is a legacy configuration conflict, select exactly one engine and save so both stored engine flags are written consistently.
+Save the selected engine and its settings from the same configuration page. The save operation validates the submitted configuration before persisting it through GLPI's native plugin/controller integration. Do not enable a second engine in the underlying configuration. If there is a legacy configuration conflict, select exactly one engine and save so both stored engine flags are written consistently.
 
 ## Scan verification and audit evidence
 
@@ -326,7 +328,7 @@ The **Test selected engine** action validates the engine currently selected in t
 
 ### ClamAV test
 
-For ClamAV, the test creates a controlled temporary clean file and executes the configured scanner command. It then scans a small harmless ZIP archive nested beyond ClamAV's supported recursion ceiling. The ClamAV command is approved only when the clean file is positively reported as clean **and** the nested archive triggers the expected `Heuristics.Limits.Exceeded` result.
+For ClamAV, the test creates a controlled temporary clean file and executes the configured scanner command. It then scans a small harmless ZIP archive nested to 102 levels, beyond ClamAV's supported recursion ceiling of 100. The ClamAV command is approved only when the clean file is positively reported as clean **and** the nested archive triggers the expected `Heuristics.Limits.Exceeded` result.
 
 This second probe catches a `clamdscan` daemon that has not enabled `AlertExceedsMax`. The probe contains only harmless text and is removed after testing.
 
