@@ -43,6 +43,10 @@ function plugin_securescan_install(): bool
         'securescan_tested_hash' => '',
         'securescan_timeout' => 30,
         'securescan_auto_update_check' => 0,
+        'securescan_virustotal_enabled' => 0,
+        'securescan_virustotal_auto_upload' => 0,
+        'securescan_virustotal_api_key' => '',
+        'securescan_virustotal_tested_hash' => '',
     ];
 
     $values = [];
@@ -91,10 +95,34 @@ function plugin_securescan_uninstall(): bool
 
     $cacheDirectory = rtrim(GLPI_PLUGIN_DOC_DIR, '/\\') . '/securescan';
     $cacheFile = $cacheDirectory . '/github-version.json';
+    $quotaFile = $cacheDirectory . '/virustotal-quota.json';
+    $pendingDirectory = $cacheDirectory . '/virustotal-pending';
+    $approvedDirectory = $cacheDirectory . '/virustotal-approved';
+    $jobsDirectory = $cacheDirectory . '/virustotal-jobs';
     if (is_file($cacheFile)) {
         @unlink($cacheFile);
     }
-    if (is_dir($cacheDirectory)) {
+    if (is_file($quotaFile) && !is_link($quotaFile)) {
+        @unlink($quotaFile);
+    }
+    foreach ([$pendingDirectory, $approvedDirectory, $jobsDirectory] as $privateDirectory) {
+        if (is_dir($privateDirectory) && !is_link($privateDirectory)) {
+            $privateFiles = array_merge(
+                glob($privateDirectory . '/*.json') ?: [],
+                glob($privateDirectory . '/*.bin') ?: [],
+                glob($privateDirectory . '/*.tmp') ?: [],
+                glob($privateDirectory . '/*.bak') ?: [],
+                $privateDirectory . '/.cleanup-check'
+            );
+            foreach ($privateFiles as $privateFile) {
+                if (is_file($privateFile) && !is_link($privateFile)) {
+                    @unlink($privateFile);
+                }
+            }
+            @rmdir($privateDirectory);
+        }
+    }
+    if (is_dir($cacheDirectory) && !is_link($cacheDirectory)) {
         @rmdir($cacheDirectory);
     }
 

@@ -50,24 +50,114 @@ final class Config extends \Config
     {
         $config = \Config::getConfigurationValues(self::CONTEXT);
 
-        return array_merge([
+        $merged = array_merge([
             'securescan_enabled'     => 0,
             'securescan_command'     => self::DEFAULT_COMMAND,
             'securescan_tested_hash' => '',
             'securescan_timeout' => 30,
             'securescan_auto_update_check' => 0,
+            'securescan_virustotal_enabled' => 0,
+            'securescan_virustotal_auto_upload' => 0,
+            'securescan_virustotal_api_key' => '',
+            'securescan_virustotal_tested_hash' => '',
         ], $config);
+
+        // One visible engine selector is derived from the legacy storage flags.
+        // If an older or manually edited config enables both, force an explicit
+        // administrator choice and keep uploads fail-closed until it is saved.
+        $engine = EngineSelector::resolve($merged);
+        $merged['securescan_engine_conflict'] = $engine === EngineSelector::CONFLICT;
+        $merged['securescan_engine'] = $engine === EngineSelector::CONFLICT
+            ? EngineSelector::DISABLED
+            : $engine;
+
+        // Never expose the encrypted API key to Twig or other callers.
+        $merged['securescan_virustotal_api_key_configured'] = !empty($merged['securescan_virustotal_api_key']);
+        unset($merged['securescan_virustotal_api_key']);
+        return $merged;
     }
 
-    public static function save(int $enabled, string $command, string $testedHash, int $timeout = 30, int $autoUpdateCheck = 0): void
-    {
-        \Config::setConfigurationValues(self::CONTEXT, [
-            'securescan_enabled'     => $enabled,
+    public static function save(
+        int $enabled,
+        string $command,
+        string $testedHash,
+        int $timeout = 30,
+        int $autoUpdateCheck = 0,
+        array $extra = []
+    ): void {
+        $virusTotalEnabled = array_key_exists('securescan_virustotal_enabled', $extra)
+            ? (int) ((int) $extra['securescan_virustotal_enabled'] === 1)
+            : 0;
+        EngineSelector::assertExclusive($enabled === 1, $virusTotalEnabled === 1);
+
+        $values = [
+            'securescan_enabled'     => $enabled === 1 ? 1 : 0,
             'securescan_command'     => $command,
             'securescan_tested_hash' => $testedHash,
             'securescan_timeout' => $timeout,
             'securescan_auto_update_check' => $autoUpdateCheck,
-        ]);
+            // Every save writes both flags explicitly so the legacy storage
+            // cannot retain a second engine from an earlier configuration.
+            'securescan_virustotal_enabled' => $virusTotalEnabled,
+        ];
+
+        foreach ([
+            'securescan_virustotal_enabled',
+            'securescan_virustotal_auto_upload',
+        ] as $setting) {
+            if (array_key_exists($setting, $extra)) {
+                $values[$setting] = (int) ((int) $extra[$setting] === 1);
+            }
+        }
+
+        if (isset($extra['securescan_virustotal_tested_hash']) && is_string($extra['securescan_virustotal_tested_hash'])) {
+            $values['securescan_virustotal_tested_hash'] = $extra['securescan_virustotal_tested_hash'];
+        }
+
+        if (isset($extra['securescan_virustotal_api_key']) && is_string($extra['securescan_virustotal_api_key'])) {
+            $apiKey = trim($extra['securescan_virustotal_api_key']);
+            if ($apiKey !== '') {
+                $values['securescan_virustotal_api_key'] = $apiKey;
+            }
+        }
+
+        if (!empty($extra['securescan_virustotal_remove_key'])) {
+            $values['securescan_virustotal_api_key'] = '';
+            $values['securescan_virustotal_tested_hash'] = '';
+        }
+
+        \Config::setConfigurationValues(self::CONTEXT, $values);
+    }
+
+    /**
+     * Read the VirusTotal API key from GLPI's encrypted configuration storage.
+     * The plaintext is kept in memory only and is never exposed to templates.
+     */
+    public static function getVirusTotalApiKey(): string
+    {
+        $config = \Config::getConfigurationValues(self::CONTEXT);
+        $stored = $config['securescan_virustotal_api_key'] ?? '';
+        if (!is_string($stored) || $stored === '') {
+            return '';
+        }
+
+        try {
+            $glpiKey = new \GLPIKey();
+            if (!$glpiKey->keyExists()) {
+                return '';
+            }
+            $decrypted = $glpiKey->decrypt($stored);
+            // GLPIKey may return the original ciphertext when it cannot read
+            // the instance key. Never send that value to VirusTotal as a key.
+            if (!is_string($decrypted) || !VirusTotal::isValidApiKeyShape($decrypted)) {
+                return '';
+            }
+
+            return $decrypted;
+        } catch (\Throwable $e) {
+            \Toolbox::logDebug($e);
+            return '';
+        }
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
@@ -100,7 +190,7 @@ final class Config extends \Config
         $currentConfig = self::getConfig();
         $command = (string) ($currentConfig['securescan_command'] ?? self::DEFAULT_COMMAND);
         $testedHash = (string) ($currentConfig['securescan_tested_hash'] ?? '');
-        $needsRetest = (int) ($currentConfig['securescan_enabled'] ?? 0) === 1
+        $needsRetest = EngineSelector::resolve($currentConfig) === EngineSelector::CLAMAV
             && !hash_equals(Antivirus::getTestedConfigurationHash($command), $testedHash);
 
         TemplateRenderer::getInstance()->display('@securescan/config.html.twig', [

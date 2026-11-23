@@ -1,0 +1,73 @@
+.securescan-wait-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(15, 23, 42, 0.66);
+}
+
+.securescan-wait-overlay.is-visible {
+    display: flex;
+}
+
+.securescan-wait-panel {
+    width: min(100%, 32rem);
+    padding: 2rem;
+    border-radius: 0.75rem;
+    background: var(--tblr-bg-surface, #fff);
+    color: var(--tblr-body-color, #1f2937);
+    text-align: center;
+    box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.25);
+}
+
+.securescan-wait-panel h2 {
+    margin: 1rem 0 0.75rem;
+    font-size: 1.25rem;
+}
+
+.securescan-wait-panel p {
+    margin: 0.5rem 0 0;
+    line-height: 1.5;
+}
+
+.securescan-wait-keep {
+    font-weight: 600;
+}
+
+.securescan-wait-spinner {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto;
+    border: 0.28rem solid rgba(100, 116, 139, 0.25);
+    border-top-color: var(--tblr-primary, #206bc4);
+    border-radius: 50%;
+    animation: securescan-spin 0.85s linear infinite;
+}
+
+@keyframes securescan-spin {
+    to { transform: rotate(360deg); }
+}
+
+.securescan-wait-progress {
+    color: var(--tblr-secondary, #667085);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.securescan-wait-report {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1rem;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.securescan-wait-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.25rem;
+}

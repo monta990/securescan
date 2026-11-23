@@ -32,7 +32,7 @@ final class Antivirus
      * entry containing the definitive Document ID without weakening the
      * pre-storage security check.
      *
-     * @var array<int, array{status: string, scan_verdict: string, scan_evidence: string, exit_code: ?int, sha256: ?string, size: ?int}>
+     * @var array<int, array{status: string, scan_verdict: string, scan_evidence: string, exit_code: ?int, sha256: ?string, size: ?int, providers: array<string, array<string, mixed>>}>
      */
     private static ?\WeakMap $pendingScans = null;
 
@@ -64,8 +64,10 @@ final class Antivirus
         }
 
         $config = Config::getConfig();
+        $engine = EngineSelector::resolve($config);
 
-        if (empty($config['securescan_enabled'])) {
+        // With neither engine selected, scanning is intentionally disabled.
+        if ($engine === EngineSelector::DISABLED) {
             return;
         }
 
@@ -84,15 +86,13 @@ final class Antivirus
             return;
         }
 
-        $command = (string) ($config['securescan_command'] ?? Config::DEFAULT_COMMAND);
-        $testedHash = (string) ($config['securescan_tested_hash'] ?? '');
-        if (!hash_equals(self::getTestedConfigurationHash($command), $testedHash)) {
+        if ($engine === EngineSelector::CONFLICT) {
             $result = [
                 'ok'            => false,
-                'message'       => __s('SecureScan must be re-tested after this plugin update. Run Test antivirus with the current command before uploading documents.', 'securescan'),
+                'message'       => __s('SecureScan is misconfigured: select either ClamAV or VirusTotal, not both.', 'securescan'),
                 'status'        => 'error',
                 'scan_verdict'  => 'unknown',
-                'scan_evidence' => 'configuration_not_retested',
+                'scan_evidence' => 'multiple_engines_selected',
                 'exit_code'     => null,
                 'output'        => '',
             ];
@@ -101,12 +101,58 @@ final class Antivirus
             return;
         }
 
-        $result = self::scan(
-            $upload['path'],
-            $command,
-            false,
-            (int) ($config['securescan_timeout'] ?? 30)
-        );
+        if ($engine === EngineSelector::CLAMAV) {
+            $command = (string) ($config['securescan_command'] ?? Config::DEFAULT_COMMAND);
+            $testedHash = (string) ($config['securescan_tested_hash'] ?? '');
+            if (!hash_equals(self::getTestedConfigurationHash($command), $testedHash)) {
+                $result = [
+                    'ok'            => false,
+                    'message'       => __s('SecureScan must be re-tested after this plugin update. Run Test selected engine with the current command before uploading documents.', 'securescan'),
+                    'status'        => 'error',
+                    'scan_verdict'  => 'unknown',
+                    'scan_evidence' => 'configuration_not_retested',
+                    'exit_code'     => null,
+                    'output'        => '',
+                ];
+                Audit::record('document', $result, $upload['path'], $item);
+                self::rejectUpload($item, $result['message'], $upload['path']);
+                return;
+            }
+
+            $result = self::scan(
+                $upload['path'],
+                $command,
+                false,
+                (int) ($config['securescan_timeout'] ?? 30)
+            );
+            $result['providers'] = [
+                'clamav' => [
+                    'status' => (string) ($result['status'] ?? 'unknown'),
+                    'evidence' => (string) ($result['scan_verdict'] ?? 'unknown'),
+                ],
+            ];
+        } else {
+            // VirusTotal is an alternative engine, not an additional layer.
+            // It must provide a completed clean report before GLPI stores the file.
+            try {
+                // The browser preflight performs all VirusTotal network requests
+                // before replaying the original GLPI form. The core pre-storage hook
+                // must only read the short-lived approval cache and never block a
+                // PHP worker on an outbound API request.
+                $virusTotal = VirusTotal::getApprovedScan($upload['path']);
+            } catch (\Throwable $e) {
+                \Toolbox::logDebug($e);
+                $virusTotal = [
+                    'status' => 'unavailable',
+                    'evidence' => 'provider_exception',
+                    'malicious' => 0,
+                    'suspicious' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            $result = self::buildVirusTotalResult($virusTotal);
+        }
 
         Audit::record('document', $result, $upload['path'], $item);
 
@@ -118,12 +164,78 @@ final class Antivirus
                 'exit_code'     => isset($result['exit_code']) ? (int) $result['exit_code'] : null,
                 'sha256'        => is_file($upload['path']) ? hash_file('sha256', $upload['path']) : null,
                 'size'          => is_file($upload['path']) ? filesize($upload['path']) : null,
+                'providers'     => is_array($result['providers'] ?? null) ? $result['providers'] : [],
             ];
         }
 
         if (!$result['ok']) {
-            self::rejectUpload($item, $result['message'], $upload['path']);
+            // Keep a VirusTotal-pending staged file available so an API or
+            // non-JavaScript caller can retry with the same already-submitted
+            // analysis ID. All other rejected temporary uploads are removed.
+            $removeStagedFile = !($engine === EngineSelector::VIRUSTOTAL && $result['status'] === 'pending');
+            self::rejectUpload($item, $result['message'], $upload['path'], $removeStagedFile);
         }
+    }
+
+    /**
+     * Convert a VirusTotal response into the same fail-closed result shape used
+     * by the ClamAV provider. A pending or missing remote report is never clean.
+     *
+     * @param array<string, mixed> $virusTotal
+     * @return array<string, mixed>
+     */
+    private static function buildVirusTotalResult(array $virusTotal): array
+    {
+        $status = (string) ($virusTotal['status'] ?? 'unavailable');
+        $evidence = (string) ($virusTotal['evidence'] ?? 'unknown');
+        $malicious = max(0, (int) ($virusTotal['malicious'] ?? 0));
+        $suspicious = max(0, (int) ($virusTotal['suspicious'] ?? 0));
+        $total = max(0, (int) ($virusTotal['total'] ?? 0));
+
+        $messages = [
+            'clean' => __s('VirusTotal returned a clean report. The file is approved.', 'securescan'),
+            'infected' => __s('VirusTotal reported malicious detections. SecureScan rejected the uploaded file.', 'securescan'),
+            'suspicious' => __s('VirusTotal reported suspicious detections. SecureScan rejected the uploaded file.', 'securescan'),
+            'not_found' => __s('VirusTotal has no completed report for this file. The file was rejected. Enable automatic submission or retry after the file has been analyzed.', 'securescan'),
+            'pending' => __s('VirusTotal is still analyzing this file. The file was not stored. Wait for the analysis to finish, then retry the upload; SecureScan will reuse the existing VirusTotal analysis instead of submitting the file again.', 'securescan'),
+            'unavailable' => __s('VirusTotal could not complete the scan because of an API, quota or network error. The file was rejected.', 'securescan'),
+        ];
+
+        $isClean = $status === 'clean';
+        $message = $messages[$status] ?? $messages['unavailable'];
+        if ($evidence === 'browser_preflight_required') {
+            $message = __s('Submit this document through the GLPI web interface so SecureScan can complete the VirusTotal preflight. Direct API uploads require an approved scan first.', 'securescan');
+        } elseif ($evidence === 'browser_preflight_required_analysis_pending') {
+            $message = __s('VirusTotal is still analyzing this file. Submit it through the GLPI web interface to resume the asynchronous scan; the file was not stored.', 'securescan');
+        }
+
+        $providerEvidence = [
+            'status' => $status,
+            'evidence' => $evidence,
+            'malicious' => $malicious,
+            'suspicious' => $suspicious,
+            'total' => $total,
+            'analysis_id' => isset($virusTotal['analysis_id']) && is_string($virusTotal['analysis_id'])
+                ? $virusTotal['analysis_id']
+                : null,
+        ];
+        $reportUrl = VirusTotal::getFileReportUrl((string) ($virusTotal['sha256'] ?? ''));
+        if ($reportUrl !== null && in_array($status, ['clean', 'infected', 'suspicious'], true)) {
+            $providerEvidence['report_url'] = $reportUrl;
+        }
+
+        return [
+            'ok' => $isClean,
+            'message' => $message,
+            'status' => $status,
+            'scan_verdict' => in_array($status, ['clean', 'infected', 'suspicious'], true) ? $status : 'unknown',
+            'scan_evidence' => 'virustotal_' . substr($evidence, 0, 64),
+            'exit_code' => null,
+            'output' => '',
+            'providers' => [
+                'virustotal' => $providerEvidence,
+            ],
+        ];
     }
 
     /**
@@ -164,7 +276,8 @@ final class Antivirus
             $pending['exit_code'],
             $pending['size'],
             $pending['sha256'],
-            $item
+            $item,
+            $pending['providers'] ?? []
         );
     }
 
@@ -303,9 +416,9 @@ final class Antivirus
         return $localHeader . $centralDirectory . $endRecord;
     }
 
-    private static function rejectUpload($item, string $message, ?string $file): void
+    private static function rejectUpload($item, string $message, ?string $file, bool $removeFile = true): void
     {
-        if ($file !== null && is_file($file)) {
+        if ($removeFile && $file !== null && is_file($file)) {
             @unlink($file);
         }
 
@@ -867,7 +980,7 @@ final class Antivirus
     public static function getTestedConfigurationHash(string $command): string
     {
         // Invalidate test results from previous verdict/parser implementations.
-        return hash('sha256', "verdict-policy=3\n" . $command);
+        return hash('sha256', "verdict-policy=4\n" . $command);
     }
 
     public static function validateCommand(string $command): ?string
