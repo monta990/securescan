@@ -1,7 +1,7 @@
 <p align="center">
   <p align="center"><img src="logo.png" alt="SecureScan" width="128" height="128"></p>
 </p>
-<h1 align="center">SecureScan 2.0.0</h1>
+<h1 align="center">SecureScan</h1>
 <p align="center">
   <strong>GLPI document upload protection with one selected antivirus engine: ClamAV or VirusTotal API v3</strong>
 </p>
