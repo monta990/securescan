@@ -1,9 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<root><name>SecureScan</name><key>securescan</key><state>stable</state>
-<logo>https://raw.githubusercontent.com/monta990/securescan/main/logo.png</logo>
-<description><short><en>Scan uploaded files with either ClamAV or VirusTotal before storing them. Only one engine can be active at a time.</en><es>Analiza archivos cargados con ClamAV o VirusTotal antes de almacenarlos. Solo puede estar activo un motor a la vez.</es></short>
-<long><en>SecureScan protects GLPI document uploads using exactly one selected engine: local ClamAV or VirusTotal API v3. Only completed clean results allow storage. Unknown-file submission is opt-in and disabled by default. VirusTotal API keys are encrypted with GLPI secured configuration.</en><es>SecureScan protege las cargas de documentos de GLPI mediante un único motor: ClamAV local o VirusTotal API v3. Solo los resultados limpios y completos permiten almacenar. El envío de archivos desconocidos es opcional y está desactivado por defecto. La clave API de VirusTotal se cifra mediante la configuración segura de GLPI.</es></long></description>
-<homepage>https://github.com/monta990/securescan</homepage><download>https://github.com/monta990/securescan/releases</download><issues>https://github.com/monta990/securescan/issues</issues><readme>https://github.com/monta990/securescan/blob/main/README.md</readme><authors><author>Edwin Elias Alvarez</author></authors>
-<versions><version><num>2.0.0</num><compatibility>~12.0</compatibility><compatibility>~11.0.7</compatibility><download_url>https://github.com/monta990/securescan/releases/download/2.0.0/securescan-2.0.0.zip</download_url></version></versions>
-<langs><lang>en_GB</lang><lang>es_MX</lang></langs><license>GPLv3+</license>
-<tags><en><tag>security</tag><tag>antivirus</tag><tag>files</tag></en><es><tag>seguridad</tag><tag>antivirus</tag><tag>archivos</tag></es></tags><screenshots><screenshot>https://raw.githubusercontent.com/monta990/securescan/main/config.png</screenshot></screenshots></root>
+<root>
+    <name>SecureScan</name>
+    <key>securescan</key>
+    <state>stable</state>
+    <logo>https://raw.githubusercontent.com/monta990/securescan/main/logo.png</logo>
+
+    <description>
+        <short>
+            <en>Scan GLPI document uploads with one selected antivirus engine: ClamAV or VirusTotal API v3.</en>
+            <es>Analiza documentos de GLPI con un solo motor antivirus: ClamAV o VirusTotal API v3.</es>
+        </short>
+        <long>
+            <en>
+SecureScan protects GLPI document uploads by scanning files before they are stored. Administrators select exactly one mode: Disabled, local ClamAV, or VirusTotal API v3. ClamAV and VirusTotal are alternatives and cannot be enabled together.
+
+**ClamAV:** Runs locally on the GLPI server through clamdscan or clamscan. SecureScan validates the result for the exact temporary file and fails closed when a file is infected, skipped, ambiguous, not fully scanned, or the scanner fails. The administrator test includes a scan-limit safety check.
+
+**VirusTotal:** Uses VirusTotal API v3 as a cloud alternative. The API key is stored encrypted through GLPI's secure configuration. Pending analyses are handled asynchronously; a private, user-bound job protects the staged file until a completed clean result is available. SHA-256 is checked before the file is restored to GLPI's upload workflow. Automatic submission of unknown files is optional, disabled by default, and limited to files up to 32 MB.
+
+**Privacy and API terms:** Files submitted to VirusTotal and queried indicators may be shared with its security community. Public/Community API access has usage and commercial-use restrictions. Use an appropriate Premium agreement for corporate production. Do not submit confidential, personal, customer, employee, or business-sensitive files through the Public/Community API.
+
+Requires PHP 8.2 or newer and GLPI 11.0.7+ or GLPI 12.x.
+            </en>
+            <es>
+SecureScan protege las cargas de documentos de GLPI analizando los archivos antes de almacenarlos. El administrador selecciona exactamente un modo: Desactivado, ClamAV local o VirusTotal API v3. ClamAV y VirusTotal son alternativas y no pueden habilitarse simultáneamente.
+
+**ClamAV:** Se ejecuta localmente en el servidor GLPI mediante clamdscan o clamscan. SecureScan valida el resultado del archivo temporal exacto y bloquea la carga cuando el archivo está infectado, fue omitido, el resultado es ambiguo, no se analizó completamente o el antivirus falla. La prueba del administrador incluye una verificación de límites de análisis.
+
+**VirusTotal:** Utiliza VirusTotal API v3 como alternativa en la nube. La clave API se almacena cifrada mediante la configuración segura de GLPI. Los análisis pendientes se procesan de forma asíncrona; un trabajo privado y asociado al usuario protege el archivo temporal hasta obtener un resultado limpio y completo. Se verifica SHA-256 antes de restaurar el archivo al flujo de carga de GLPI. El envío automático de archivos desconocidos es opcional, está desactivado por defecto y se limita a archivos de hasta 32 MB.
+
+**Privacidad y condiciones de API:** Los archivos enviados a VirusTotal y los indicadores consultados pueden compartirse con su comunidad de seguridad. El acceso Public/Community tiene límites de uso y restricciones para uso comercial. Para producción corporativa debe utilizarse un contrato Premium adecuado. No envíe documentos confidenciales, personales, de clientes, empleados o sensibles para el negocio mediante la API Public/Community.
+
+Requiere PHP 8.2 o posterior y GLPI 11.0.7+ o GLPI 12.x.
+            </es>
+        </long>
+    </description>
+
+    <homepage>https://github.com/monta990/securescan</homepage>
+    <download>https://github.com/monta990/securescan/releases</download>
+    <issues>https://github.com/monta990/securescan/issues</issues>
+    <readme>https://github.com/monta990/securescan/blob/main/README.md</readme>
+
+    <authors>
+        <author>Edwin Elias Alvarez</author>
+    </authors>
+
+    <versions>
+        <version>
+            <num>2.0.0</num>
+            <compatibility>~11.0.7</compatibility>
+            <compatibility>~12.0.0</compatibility>
+            <download_url>https://github.com/monta990/securescan/releases/download/2.0.0/securescan-2.0.0.zip</download_url>
+        </version>
+    </versions>
+
+    <langs>
+        <lang>en_GB</lang>
+        <lang>es_MX</lang>
+    </langs>
+
+    <license>GPLv3+</license>
+
+    <tags>
+        <en>
+            <tag>security</tag>
+            <tag>antivirus</tag>
+            <tag>files</tag>
+        </en>
+        <es>
+            <tag>seguridad</tag>
+            <tag>antivirus</tag>
+            <tag>archivos</tag>
+        </es>
+    </tags>
+
+    <screenshots>
+        <screenshot>https://raw.githubusercontent.com/monta990/securescan/main/config.png</screenshot>
+    </screenshots>
+</root>
